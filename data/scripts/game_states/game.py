@@ -11,6 +11,23 @@ from .. import sfx
 from ..config import COLORS
 from ..animation import Animation
 from data.scripts import config
+from pygame import Vector2
+
+# WAVES = (
+#     ()
+# )
+
+class Projectile(PhysicsEntity):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        base_img = super().img
+        angle = self.vel.angle_to(Vector2(1, 0))
+        self._img = pygame.transform.rotate(base_img, angle)
+
+    @property
+    def img(self):
+        return self._img
 
 class Bar:
 
@@ -82,16 +99,25 @@ class Game(State):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        y = 100
-        rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
+        y = 70
+        # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
+        rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
 
         self.entity = PhysicsEntity(pos=(120, 30), name='side', action='idle')
         self.e_speed = 1.5
 
-        self.bars = {
-            'hp': Bar(pygame.Rect(10, 10, 100, 20), 50, 100, 'hp', 'HP'),
-        }
+        self.enemies = []
+        self.enemies.append(
+            PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
+        )
 
+        self.bars = {
+            'hp': Bar(pygame.Rect(10, 10, 100, 15), 50, 100, 'hp', 'HP'),
+        }
+        self.gold = 0
+
+        self.projectiles=[]
+        
         self.loop_duration = 60
         self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
                               ParticleGenerator.from_template((300, 200), 'color test')]
@@ -102,7 +128,7 @@ class Game(State):
         self.slots = [None for i in range(len(self.snap_positions))]
         self.blocks = [
             Block(3, 'hp', rects[0], 'Get 1 HP', 'red', disabled=True),
-            Block(3, 'hp', rects[1], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'projectile', rects[1], 'Projectile', 'purple', disabled=True),
             Block(3, 'hp', rects[2], 'Get 1 HP', 'red', disabled=True),
             Block(3, 'gold', rects[3], 'Get 1 Gold', 'yellow', disabled=True),
             Block(self.loop_duration, 'wait',
@@ -127,14 +153,18 @@ class Game(State):
 
     def sub_update(self):
 
-
-        self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
-        for particle_gen in self.particle_gens:
-            particle_gen.render(self.handler.canvas)
-
         # bg ------------
-        self.handler.canvas.fill((60, 80, 60))
-        # pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 200, config.SCREEN_SIZE[1]))
+        self.handler.canvas.fill(COLORS['green3'])
+        pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 200, config.SCREEN_SIZE[1]))
+
+
+        # self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
+        # for particle_gen in self.particle_gens:
+        #     particle_gen.render(self.handler.canvas)
+
+        for projectile in self.projectiles:
+            projectile.update()
+            projectile.render(self.handler.canvas)
 
         # Update blocks ------
         # NOTE: only skips 1 frame, not all Nones
@@ -154,6 +184,12 @@ class Game(State):
             self.timer = Timer(block.duration)
             if block.id == 'hp':
                 self.bars['hp'].change_val(1)
+            elif block.id == 'projectile':
+                vel= -pygame.Vector2(self.entity.rect.center)+self.handler.inputs['mouse pos']
+                vel.scale_to_length(6)
+                self.projectiles.append(Projectile(vel=vel, pos=self.entity.rect.center, name='projectile'))
+            elif block.id == 'gold':
+                self.gold += 1
 
         self.timer.update()
         if self.timer.done:
@@ -216,7 +252,17 @@ class Game(State):
         for key, bar in self.bars.items():
             bar.render(self.handler.canvas)
 
-        # Update entity
+        self.handler.canvas.blit(FONTS['basic'].get_surf(f'{self.gold}'), (10, 30))
+
+        # update enemy
+        for enemy in self.enemies:
+            if enemy.name == 'enemy':
+                enemy.vel = -enemy.pos + self.entity.pos
+                enemy.animation.flip[0] = enemy.vel[0] < 0
+            enemy.update([])
+            enemy.render(self.handler.canvas)
+
+        # Update player
         self.entity.vel = [0, 0]
         if self.handler.inputs['held'].get('a'):
             self.entity.vel[0] -= self.e_speed

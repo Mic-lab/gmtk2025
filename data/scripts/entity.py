@@ -62,6 +62,11 @@ class PhysicsEntity(Entity):
     def update(self, rects=None):
         output = super().update()
 
+        self.vel = pygame.Vector2(self.vel)
+        print(self.vel)
+        if self.vel.length() > self.max_vel:
+            self.vel.scale_to_length(self.max_vel)
+
         self.move(rects)
         self.vel += self.acceleration
         if self.vel.length() > self.max_vel:

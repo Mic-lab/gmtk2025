@@ -23,6 +23,11 @@ class Button:
                        'fill': COLORS['green2'], 
                        'text': [240, 240, 240] }
         },
+        'purple': {
+            'colors': {'fill': COLORS['purple'], 
+                       'border': COLORS['black'], 
+                       'text': [240, 240, 240] }
+        },
         'wait': {
             'colors': {'fill': COLORS['blue'], 
                        'border': COLORS['black'], 

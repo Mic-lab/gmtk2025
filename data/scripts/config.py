@@ -1,6 +1,6 @@
 # https://pacoup.com/2011/06/12/list-of-true-169-resolutions/
 CANVAS_SIZE = (512, 288)
-SCALE = 2
+SCALE = 3
 SCREEN_SIZE = SCALE*CANVAS_SIZE[0], SCALE*CANVAS_SIZE[1]
 
 fps = 60
@@ -14,4 +14,6 @@ COLORS = {
     'brown': (190, 74, 46),
     'green1': (99, 199, 77),
     'green2': (62, 137, 72),
+    'green3': (38, 92, 66),
+    'purple': (104, 56, 108)
 }
