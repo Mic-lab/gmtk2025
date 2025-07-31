@@ -18,6 +18,11 @@ class Button:
                        'fill': [162, 38, 61], 
                        'text': [240, 240, 240] }
         },
+        'yellow': {
+            'colors': {'border': COLORS['black'], 
+                       'fill': COLORS['green2'], 
+                       'text': [240, 240, 240] }
+        },
         'wait': {
             'colors': {'fill': COLORS['blue'], 
                        'border': COLORS['black'], 
@@ -79,6 +84,7 @@ class Button:
     def generate_surf(self):
         self.surf = pygame.Surface(self.rect.size)
         self.surf.set_colorkey((0, 0, 0))
+        print(f'{self.rect=}')
         rect = pygame.Rect(0, 0, *self.rect.size)
 
         if self.preset in {'basic',}:

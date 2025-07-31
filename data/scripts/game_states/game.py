@@ -10,6 +10,7 @@ from ..font import FONTS
 from .. import sfx
 from ..config import COLORS
 from ..animation import Animation
+from data.scripts import config
 
 class Bar:
 
@@ -35,7 +36,7 @@ class Bar:
         r = self.rect.copy()
         r.topleft = (0, 0)
         pygame.draw.rect(s, COLORS['black'], r, border_radius=2)
-        fill_rect = r
+        fill_rect = r.copy()
         fill_rect.x += 2
         fill_rect.w -= 4
         fill_rect.y += 2
@@ -49,20 +50,24 @@ class Bar:
         self.surf = s
 
     def change_val(self, change):
-        self.val += change
-        if self.val > self.max:
-            self.val = self.max
-        elif self.val < 0:
-            self.val = 0
+        self.value += change
+        if self.value > self.max_val:
+            self.value = self.max_val
+        elif self.value < 0:
+            self.value = 0
         self.generate_surf()
 
     def render(self, canvas):
         canvas.blit(self.surf, self.rect.topleft)
 
 class Block(Button):
-    def __init__(self, duration, *args, **kwargs):
+    def __init__(self, duration, id, *args, **kwargs):
+        self.id=id
         self.locked = False
         self.duration = duration
+        args=list(args)
+        print(args)
+        args[1] += f' <{round(self.duration/60, 2)}>'
         super().__init__(*args, **kwargs)
 
     @property
@@ -78,13 +83,13 @@ class Game(State):
         super().__init__(*args, **kwargs)
 
         y = 100
-        rects = [pygame.Rect(120, y+i*20, 80, 16) for i in range(20)]
+        rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
 
         self.entity = PhysicsEntity(pos=(120, 30), name='side', action='idle')
         self.e_speed = 1.5
 
         self.bars = {
-            'hp': Bar(pygame.Rect(10, 10, 100, 20), 100, 100, 'hp', 'HP'),
+            'hp': Bar(pygame.Rect(10, 10, 100, 20), 50, 100, 'hp', 'HP'),
         }
 
         self.loop_duration = 60
@@ -96,11 +101,18 @@ class Game(State):
         self.snap_positions = [(30, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
         self.blocks = [
-            Block(10, rects[0], 'Get 1 HP', 'red', disabled=True),
-            Block(self.loop_duration, pygame.Rect(*self.snap_positions[-1], *rects[0].size), text='Wait 1 sec', preset='wait'),
+            Block(3, 'hp', rects[0], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'hp', rects[1], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'hp', rects[2], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'gold', rects[3], 'Get 1 Gold', 'yellow', disabled=True),
+            Block(self.loop_duration, 'wait',
+                  pygame.Rect(*self.snap_positions[-1],
+                              *rects[0].size), 
+                  'Wait 1 sec', preset='wait'),
         ]
-        self.block_i = 4
-        self.timer = Timer(1)
+        self.block_i = 0
+        self.just_switched = True
+        # self.timer = Timer(1)
 
         self.blocks[-1].locked = True
         self.blocks[-1].generate_surf()
@@ -122,32 +134,38 @@ class Game(State):
 
         # bg ------------
         self.handler.canvas.fill((60, 80, 60))
+        # pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 200, config.SCREEN_SIZE[1]))
 
         # Update blocks ------
         # NOTE: only skips 1 frame, not all Nones
         skip = False
 
-        block = self.slots[self.block_i]
-        if block is None:
-            skip = True
-        else:
-            self.timer.update()
-
-
-        if self.timer.done:
-            skip = True
-        
-        if skip:
+        if self.just_switched:
             self.block_i = (self.block_i+1)%5
+
+        block = self.slots[self.block_i]
+        while block is None:
+            self.block_i = (self.block_i+1)%5
+            self.just_switched = True
             block = self.slots[self.block_i]
-            if block is not None:
-                self.timer = Timer(block.duration)
-                if block.text == 'Get 1 hp':
-                    self.bars['hp'].change_val(1)
+
+        if self.just_switched:
+            self.just_switched = False
+            self.timer = Timer(block.duration)
+            if block.id == 'hp':
+                self.bars['hp'].change_val(1)
+
+        self.timer.update()
+        if self.timer.done:
+            self.just_switched = True
+
+            
+
 
         if self.handler.inputs['released'].get('mouse1'):
             self.selected_block = None
 
+        clicked_blocks = []
         for block in self.blocks:
             if block == self.selected_block:
                 block.update(self.handler.inputs, hovered=True)
@@ -157,16 +175,24 @@ class Game(State):
             block.render(self.handler.canvas)
 
             if block.clicked and not block.locked:
-                self.selected_block = block
-                if self.selected_block in self.slots:
-                    i = self.slots.index(self.selected_block)
-                    self.slots[i] = None
+                clicked_blocks.append(block)
 
             old_disabled = block.disabled
             new_disabled = not (block in self.slots)
             block.disabled = new_disabled
             if old_disabled != new_disabled:
                 block.generate_surf()
+
+
+        if clicked_blocks:
+            block = clicked_blocks[-1]
+            self.selected_block = block
+            if self.selected_block in self.slots:
+                i = self.slots.index(self.selected_block)
+                self.slots[i] = None
+                    
+
+
 
         if self.selected_block:
             self.selected_block.rect.midleft = self.handler.inputs.get('mouse pos') - pygame.Vector2(1, 0)
