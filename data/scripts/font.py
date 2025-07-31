@@ -21,6 +21,7 @@ class Font:
         return surf
 
 FONTS = {
-    'regular': Font('ProggyClean', 16, (240, 240, 240)),
-    'basic': Font('Minecraftia', 8, (240, 240, 240)),
+    # 'regular': Font('ProggyClean', 16, (240, 240, 240)),
+    # 'basic': Font('Minecraftia', 8, (240, 240, 240)),
+    'basic': Font('m5x7', 16, (240, 240, 240)),
 }

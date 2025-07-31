@@ -1,26 +1,233 @@
+from copy import copy
 import pygame
 from .state import State
-# from .menu import Menu
+from ..mgl import shader_handler
 from ..button import Button
+from ..entity import Entity, PhysicsEntity
+from ..timer import Timer
+from ..particle import Particle, ParticleGenerator
+from ..font import FONTS
+from .. import sfx
+from ..config import COLORS
+from ..animation import Animation
+
+class Bar:
+
+    STYLES = {
+        'hp': {
+            'color': (255, 0, 68),
+        }
+    }
+
+    def __init__(self, rect: pygame.Rect, value, max_val, style, label='') -> None:
+        self.rect = rect
+        self.value = value
+        self.max_val = max_val
+        self.style = style
+        self.label = label
+        self.generate_surf()
+
+    def generate_surf(self):
+        s = pygame.Surface(self.rect.size)
+        # s.fill(COLORS['black'])
+        s.set_colorkey((0, 0, 0))
+
+        r = self.rect.copy()
+        r.topleft = (0, 0)
+        pygame.draw.rect(s, COLORS['black'], r, border_radius=2)
+        fill_rect = r
+        fill_rect.x += 2
+        fill_rect.w -= 4
+        fill_rect.y += 2
+        fill_rect.h -= 4
+
+        fill_rect.w *= self.value / self.max_val
+
+        pygame.draw.rect(s, COLORS['red'], fill_rect, border_radius=2)
+        txt_img = FONTS['basic'].get_surf(f'{self.value}/{self.max_val} {self.label}')
+        s.blit(txt_img, (r.centerx - txt_img.get_width()*0.5, r.centery - txt_img.get_height()*0.5))
+        self.surf = s
+
+    def change_val(self, change):
+        self.val += change
+        if self.val > self.max:
+            self.val = self.max
+        elif self.val < 0:
+            self.val = 0
+        self.generate_surf()
+
+    def render(self, canvas):
+        canvas.blit(self.surf, self.rect.topleft)
+
+class Block(Button):
+    def __init__(self, duration, *args, **kwargs):
+        self.locked = False
+        self.duration = duration
+        super().__init__(*args, **kwargs)
+
+    @property
+    def state(self):
+        if self.locked:
+            return 0
+        else:
+            return super().state
 
 class Game(State):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        rects = [pygame.Rect(30, 30+i*30, 80, 20) for i in range(4)]
-        self.buttons = {
-            'menu': Button(rects[0], 'back', 'basic'),
+        y = 100
+        rects = [pygame.Rect(120, y+i*20, 80, 16) for i in range(20)]
+
+        self.entity = PhysicsEntity(pos=(120, 30), name='side', action='idle')
+        self.e_speed = 1.5
+
+        self.bars = {
+            'hp': Bar(pygame.Rect(10, 10, 100, 20), 100, 100, 'hp', 'HP'),
         }
 
+        self.loop_duration = 60
+        self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
+                              ParticleGenerator.from_template((300, 200), 'color test')]
+
+        self.loop_block = Entity((10, y), 'loop_block')
+
+        self.snap_positions = [(30, y+19+i*15) for i in range(5)]
+        self.slots = [None for i in range(len(self.snap_positions))]
+        self.blocks = [
+            Block(10, rects[0], 'Get 1 HP', 'red', disabled=True),
+            Block(self.loop_duration, pygame.Rect(*self.snap_positions[-1], *rects[0].size), text='Wait 1 sec', preset='wait'),
+        ]
+        self.block_i = 4
+        self.timer = Timer(1)
+
+        self.blocks[-1].locked = True
+        self.blocks[-1].generate_surf()
+        self.slots[-1] = self.blocks[-1]
+
+        self.buttons = {
+
+        }
+        self.arrow = Animation.img_db['arrow']
+
+        self.selected_block = None
+
     def sub_update(self):
-        self.handler.canvas.fill((20, 20, 20))
+
+
+        self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
+        for particle_gen in self.particle_gens:
+            particle_gen.render(self.handler.canvas)
+
+        # bg ------------
+        self.handler.canvas.fill((60, 80, 60))
+
+        # Update blocks ------
+        # NOTE: only skips 1 frame, not all Nones
+        skip = False
+
+        block = self.slots[self.block_i]
+        if block is None:
+            skip = True
+        else:
+            self.timer.update()
+
+
+        if self.timer.done:
+            skip = True
+        
+        if skip:
+            self.block_i = (self.block_i+1)%5
+            block = self.slots[self.block_i]
+            if block is not None:
+                self.timer = Timer(block.duration)
+                if block.text == 'Get 1 hp':
+                    self.bars['hp'].change_val(1)
+
+        if self.handler.inputs['released'].get('mouse1'):
+            self.selected_block = None
+
+        for block in self.blocks:
+            if block == self.selected_block:
+                block.update(self.handler.inputs, hovered=True)
+            else:
+                block.update(self.handler.inputs)
+
+            block.render(self.handler.canvas)
+
+            if block.clicked and not block.locked:
+                self.selected_block = block
+                if self.selected_block in self.slots:
+                    i = self.slots.index(self.selected_block)
+                    self.slots[i] = None
+
+            old_disabled = block.disabled
+            new_disabled = not (block in self.slots)
+            block.disabled = new_disabled
+            if old_disabled != new_disabled:
+                block.generate_surf()
+
+        if self.selected_block:
+            self.selected_block.rect.midleft = self.handler.inputs.get('mouse pos') - pygame.Vector2(1, 0)
+            for i, pos in enumerate(self.snap_positions):
+                if self.slots[i] is not None:
+                    continue
+                if (pygame.Vector2(self.selected_block.rect.topleft) - pos).length() <= 6:
+                    self.slots[i] = self.selected_block
+                    self.selected_block.rect.topleft = pos
+                    self.selected_block = None
+                    break
+
+
 
         # Update Buttons
         for key, btn in self.buttons.items():
             btn.update(self.handler.inputs)
             btn.render(self.handler.canvas)
 
-            if btn.clicked:
-                if key == 'menu':
-                    self.handler.transition_to(self.handler.states.Menu)
+        # Update bars
+        for key, bar in self.bars.items():
+            bar.render(self.handler.canvas)
+
+        # Update entity
+        self.entity.vel = [0, 0]
+        if self.handler.inputs['held'].get('a'):
+            self.entity.vel[0] -= self.e_speed
+            self.entity.animation.flip[0] = True
+        elif self.handler.inputs['held'].get('d'):
+            self.entity.vel[0] += self.e_speed
+            self.entity.animation.flip[0] = False
+        if self.handler.inputs['held'].get('w'):
+            self.entity.vel[1] -= self.e_speed
+        elif self.handler.inputs['held'].get('s'):
+            self.entity.vel[1] += self.e_speed
+
+        if any(self.entity.vel):
+            self.entity.animation.set_action('run')
+        else:
+            self.entity.animation.set_action('idle')
+
+        self.entity.update([btn.rect for btn in self.buttons.values()])
+        self.entity.render(self.handler.canvas)
+
+        # text ----------
+        text = [f'{round(self.handler.clock.get_fps())} fps',
+                f'mouse pos {self.handler.inputs["mouse pos"]}',
+                f'{self.timer=}',
+                f'{self.block_i=}',
+
+
+                ]
+        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (300, 0))
+
+
+        self.loop_block.update()
+        self.loop_block.render(self.handler.canvas)
+
+        self.handler.canvas.blit(self.arrow, (14, self.snap_positions[self.block_i][1]+6))
+
+        # Shader -----
+        # shader_handler.vars['caTimer'] = -1 if not self.timer else self.timer.ratio ** 2
+
+        self.first_loop = False

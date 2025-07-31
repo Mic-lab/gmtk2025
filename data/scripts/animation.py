@@ -91,7 +91,9 @@ class Animation:
                 except FileNotFoundError:
                     # No json file means it's a static image
                     img = utils.load_img(os.path.join(directory, file_name))
-                    cls.animation_db[animation_name] = {None: img}  # So that Animation can find it easily
+                    cls.animation_db[animation_name] = {'frames': {None: [{'img': img, 'duration': 9999}]},
+                                                        'size': (0, 0),
+                                                        'rect': img.get_bounding_rect()}  
                     cls.img_db[animation_name] = img                # For ease of access outside of the class
                 else:
                     spritesheet = utils.load_img(os.path.join(directory, file_name))
@@ -154,7 +156,3 @@ class Animation:
         self.game_frame = 0
 
 Animation.load_db()
-
-print(f'{" Animation DB ":{"-"}^80}')
-pprint(Animation.animation_db)
-print('_'*80)
