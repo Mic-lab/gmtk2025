@@ -24,6 +24,7 @@ class Projectile(PhysicsEntity):
         base_img = super().img
         angle = self.vel.angle_to(Vector2(1, 0))
         self._img = pygame.transform.rotate(base_img, angle)
+        self._real_pos = self._real_pos - 0.5*Vector2(self._img.get_size())
 
     @property
     def img(self):
@@ -99,11 +100,20 @@ class Game(State):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        bg_size = 176
+        wall_width = 30
+
+        self.walls = [pygame.Rect(bg_size-30, -wall_width, 30, config.SCREEN_SIZE[1]),
+                      pygame.Rect(config.CANVAS_SIZE[0], 0, 30, config.SCREEN_SIZE[1]),
+                      pygame.Rect(bg_size-wall_width, -wall_width, config.CANVAS_SIZE[0], 30),
+                      pygame.Rect(0, config.CANVAS_SIZE[1], config.CANVAS_SIZE[0], 30)]
+
+
         y = 70
         # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
         rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
 
-        self.entity = PhysicsEntity(pos=(120, 30), name='side', action='idle')
+        self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
         self.e_speed = 1.5
 
         self.enemies = []
@@ -117,6 +127,7 @@ class Game(State):
         self.gold = 0
 
         self.projectiles=[]
+        self.slashes = []
         
         self.loop_duration = 60
         self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
@@ -129,8 +140,9 @@ class Game(State):
         self.blocks = [
             Block(3, 'hp', rects[0], 'Get 1 HP', 'red', disabled=True),
             Block(3, 'projectile', rects[1], 'Projectile', 'purple', disabled=True),
-            Block(3, 'hp', rects[2], 'Get 1 HP', 'red', disabled=True),
-            Block(3, 'gold', rects[3], 'Get 1 Gold', 'yellow', disabled=True),
+            Block(3, 'slash', rects[2], 'Slash', 'purple', disabled=True),
+            Block(3, 'hp', rects[3], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'gold', rects[4], 'Get 1 Gold', 'yellow', disabled=True),
             Block(self.loop_duration, 'wait',
                   pygame.Rect(*self.snap_positions[-1],
                               *rects[0].size), 
@@ -155,7 +167,8 @@ class Game(State):
 
         # bg ------------
         self.handler.canvas.fill(COLORS['green3'])
-        pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 200, config.SCREEN_SIZE[1]))
+        # pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 180, config.SCREEN_SIZE[1]))
+        self.handler.canvas.blit(Animation.img_db['scratch_bg'], (0, 0))
 
 
         # self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
@@ -165,6 +178,16 @@ class Game(State):
         for projectile in self.projectiles:
             projectile.update()
             projectile.render(self.handler.canvas)
+
+        new_slashes = []
+        for slash in self.slashes:
+            done = slash.update()
+            if done:
+                continue
+            else:
+                slash.render(self.handler.canvas)
+                new_slashes.append(slash)
+        self.slashes = new_slashes
 
         # Update blocks ------
         # NOTE: only skips 1 frame, not all Nones
@@ -188,6 +211,24 @@ class Game(State):
                 vel= -pygame.Vector2(self.entity.rect.center)+self.handler.inputs['mouse pos']
                 vel.scale_to_length(6)
                 self.projectiles.append(Projectile(vel=vel, pos=self.entity.rect.center, name='projectile'))
+            elif block.id == 'slash':
+                # slash_pos = Vector2(self.entity.rect.center) - self.handler.inputs['mouse pos']
+                # mouse_dist.scale_to_length(8)
+                slash = PhysicsEntity(vel=self.entity.vel.copy(), pos=(0,0), name='slash', action='idle')
+                slash.enemies = []
+
+                slash_pos = self.entity.rect.center
+                if slash_pos[0] - self.handler.inputs['mouse pos'][0] > 0:
+                    coef = -1
+                    flip = True
+                else:
+                    coef = 1
+                    flip = False
+                slash_pos = (slash_pos[0] + coef*12 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
+                slash._real_pos = slash_pos
+                slash.animation.flip = (flip, False)
+                
+                self.slashes.append(slash)
             elif block.id == 'gold':
                 self.gold += 1
 
@@ -259,7 +300,15 @@ class Game(State):
             if enemy.name == 'enemy':
                 enemy.vel = -enemy.pos + self.entity.pos
                 enemy.animation.flip[0] = enemy.vel[0] < 0
-            enemy.update([])
+
+            done = enemy.update(self.walls)
+            if done and enemy.animation.action == 'hit':
+                enemy.animation.set_action('run')
+
+            for slash in self.slashes:
+                if enemy not in slash.enemies and enemy.rect.colliderect(slash.rect):
+                    slash.enemies.append(enemy)
+                    enemy.animation.set_action('hit')
             enemy.render(self.handler.canvas)
 
         # Update player
@@ -280,8 +329,13 @@ class Game(State):
         else:
             self.entity.animation.set_action('idle')
 
-        self.entity.update([btn.rect for btn in self.buttons.values()])
+        self.entity.update(self.walls)
         self.entity.render(self.handler.canvas)
+
+        # if self.handler.inputs['held'].get('mouse1'):
+        #     for wall in self.walls:
+        #         pygame.draw.rect(self.handler.canvas, (200, 200, 0), wall)
+
 
         # text ----------
         text = [f'{round(self.handler.clock.get_fps())} fps',

@@ -106,6 +106,15 @@
     "spriteSourceSize": { "x": 26, "y": 17, "w": 11, "h": 15 },
     "sourceSize": { "w": 64, "h": 64 },
     "duration": 100
+   },
+   {
+    "filename": "hit",
+    "frame": { "x": 0, "y": 30, "w": 11, "h": 15 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 17, "w": 11, "h": 15 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 200
    }
  ],
  "meta": {
@@ -113,7 +122,7 @@
   "version": "1.x-dev",
   "image": "enemy.png",
   "format": "I8",
-  "size": { "w": 88, "h": 30 },
+  "size": { "w": 88, "h": 45 },
   "scale": "1",
   "slices": [
    { "name": "rect", "color": "#0000ffff", "keys": [{ "frame": 0, "bounds": {"x": 26, "y": 17, "w": 11, "h": 15 } }] }
