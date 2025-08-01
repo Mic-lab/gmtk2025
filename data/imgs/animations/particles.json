@@ -151,6 +151,51 @@
     "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
     "sourceSize": { "w": 32, "h": 32 },
     "duration": 100
+   },
+   {
+    "filename": "shards",
+    "frame": { "x": 0, "y": 30, "w": 12, "h": 10 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
+    "sourceSize": { "w": 32, "h": 32 },
+    "duration": 100
+   },
+   {
+    "filename": "shards",
+    "frame": { "x": 12, "y": 30, "w": 12, "h": 10 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
+    "sourceSize": { "w": 32, "h": 32 },
+    "duration": 100
+   },
+   {
+    "filename": "shards",
+    "frame": { "x": 24, "y": 30, "w": 12, "h": 10 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
+    "sourceSize": { "w": 32, "h": 32 },
+    "duration": 100
+   },
+   {
+    "filename": "shards",
+    "frame": { "x": 36, "y": 30, "w": 12, "h": 10 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
+    "sourceSize": { "w": 32, "h": 32 },
+    "duration": 100
+   },
+   {
+    "filename": "shards",
+    "frame": { "x": 48, "y": 30, "w": 12, "h": 10 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 10, "y": 12, "w": 12, "h": 10 },
+    "sourceSize": { "w": 32, "h": 32 },
+    "duration": 100
    }
  ],
  "meta": {
@@ -158,13 +203,8 @@
   "version": "1.x-dev",
   "image": "particles.png",
   "format": "RGBA8888",
-  "size": { "w": 84, "h": 30 },
+  "size": { "w": 84, "h": 40 },
   "scale": "1",
-  "frameTags": [
-   { "name": "basic", "from": 0, "to": 6, "direction": "forward" },
-   { "name": "arrow", "from": 7, "to": 10, "direction": "forward" },
-   { "name": "group", "from": 11, "to": 16, "direction": "forward" }
-  ],
   "slices": [
   ]
  }

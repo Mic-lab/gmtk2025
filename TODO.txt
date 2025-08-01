@@ -1,3 +1,8 @@
-+ 1 besides hp
+- wave system
+- fire enemies
+
+
+polish
+    + 1 besides hp
 
 size gives error cause no size

@@ -8,7 +8,7 @@ from pygame import Vector2
 
 class Particle(PhysicsEntity):
 
-    ANGLE_ROUNDING = 30
+    ANGLE_ROUNDING = 10
     cache = {}
 
     def __init__(self, pos=(0, 0), angled=False, color=None, *args, **kwargs):
@@ -52,6 +52,12 @@ class Particle(PhysicsEntity):
 class ParticleGenerator:
 
     TEMPLATES = {
+        'shards': {
+            'base_particle': Particle(action='shards', vel=(0, -1), acceleration=(0, 0.1), angled=True),
+            'vel_randomness': 1,
+            'rate': 10,
+        'duration': 1,
+        },
         'smoke': {
             'base_particle': Particle(action='basic', vel=(0, 0)),
             'vel_randomness': 0.5,

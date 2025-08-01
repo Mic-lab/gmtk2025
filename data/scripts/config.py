@@ -4,6 +4,7 @@ SCALE = 3
 SCREEN_SIZE = SCALE*CANVAS_SIZE[0], SCALE*CANVAS_SIZE[1]
 
 fps = 60
+# fps = 0
 
 COLORS = {
     'black': (24, 20, 37),
@@ -15,5 +16,6 @@ COLORS = {
     'green1': (99, 199, 77),
     'green2': (62, 137, 72),
     'green3': (38, 92, 66),
-    'purple': (104, 56, 108)
+    'purple': (104, 56, 108),
+    'blue1': (18, 78, 137),
 }

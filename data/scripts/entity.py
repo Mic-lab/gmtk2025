@@ -63,7 +63,6 @@ class PhysicsEntity(Entity):
         output = super().update()
 
         self.vel = pygame.Vector2(self.vel)
-        print(self.vel)
         if self.vel.length() > self.max_vel:
             self.vel.scale_to_length(self.max_vel)
 

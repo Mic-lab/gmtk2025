@@ -39,7 +39,7 @@ void main() {
 
     // Chromatic abberation
     if (caTimer >= 0.0) {
-        float caIntensity = (1.0 - caTimer)*centerDist * caCoef;
+        float caIntensity = (caTimer)*centerDist * caCoef;
         vec2 sampleVec = vec2(0.0, caIntensity);
         float caSample1 = texture(canvasTex, uvs + sampleVec).r;
         float caSample2 = texture(canvasTex, uvs - rotateVec(sampleVec, 2.0*PI/3.0)).g;
@@ -47,6 +47,9 @@ void main() {
         f_color.r = caSample1;
         f_color.g = caSample2;
         f_color.b = caSample3;
+
+        f_color.gb *= 0.9;
+        f_color.r *= 0.8;
     }
 
     /*

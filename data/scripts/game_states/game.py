@@ -1,4 +1,6 @@
 from copy import copy
+import math
+from random import uniform
 import pygame
 from .state import State
 from ..mgl import shader_handler
@@ -25,6 +27,7 @@ class Projectile(PhysicsEntity):
         angle = self.vel.angle_to(Vector2(1, 0))
         self._img = pygame.transform.rotate(base_img, angle)
         self._real_pos = self._real_pos - 0.5*Vector2(self._img.get_size())
+        self.enemies = []
 
     @property
     def img(self):
@@ -34,6 +37,9 @@ class Bar:
 
     STYLES = {
         'hp': {
+            'color': (255, 0, 68),
+        },
+        'enemy': {
             'color': (255, 0, 68),
         }
     }
@@ -51,20 +57,29 @@ class Bar:
         # s.fill(COLORS['black'])
         s.set_colorkey((0, 0, 0))
 
-        r = self.rect.copy()
-        r.topleft = (0, 0)
-        pygame.draw.rect(s, COLORS['black'], r, border_radius=2)
-        fill_rect = r.copy()
-        fill_rect.x += 2
-        fill_rect.w -= 4
-        fill_rect.y += 2
-        fill_rect.h -= 4
+        if self.style == 'hp':
+            r = self.rect.copy()
+            r.topleft = (0, 0)
+            pygame.draw.rect(s, COLORS['black'], r, border_radius=2)
+            fill_rect = r.copy()
+            fill_rect.x += 2
+            fill_rect.w -= 4
+            fill_rect.y += 2
+            fill_rect.h -= 4
 
-        fill_rect.w *= self.value / self.max_val
+            fill_rect.w *= self.value / self.max_val
 
-        pygame.draw.rect(s, COLORS['red'], fill_rect, border_radius=2)
-        txt_img = FONTS['basic'].get_surf(f'{self.value}/{self.max_val} {self.label}')
-        s.blit(txt_img, (r.centerx - txt_img.get_width()*0.5, r.centery - txt_img.get_height()*0.5))
+            pygame.draw.rect(s, COLORS['red'], fill_rect, border_radius=2)
+            txt_img = FONTS['basic'].get_surf(f'{self.value}/{self.max_val} {self.label}')
+            s.blit(txt_img, (r.centerx - txt_img.get_width()*0.5, r.centery - txt_img.get_height()*0.5))
+
+        elif self.style == 'enemy':
+            s.fill(COLORS['black'])
+            fill_rect = self.rect.copy()
+            fill_rect.topleft=(0,0)
+            fill_rect.w *= self.value / self.max_val
+            pygame.draw.rect(s, COLORS['red'], fill_rect)
+
         self.surf = s
 
     def change_val(self, change):
@@ -84,7 +99,6 @@ class Block(Button):
         self.locked = False
         self.duration = duration
         args=list(args)
-        print(args)
         args[1] += f' <{round(self.duration/60, 2)}>'
         super().__init__(*args, **kwargs)
 
@@ -96,6 +110,8 @@ class Block(Button):
             return super().state
 
 class Game(State):
+
+    SHOP_SPEED = 10
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -111,15 +127,14 @@ class Game(State):
 
         y = 70
         # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
-        rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
 
         self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
         self.e_speed = 1.5
 
         self.enemies = []
-        self.enemies.append(
-            PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
-        )
+        enemy = PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
+        enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 10, 10, 'enemy')
+        self.enemies.append(enemy)
 
         self.bars = {
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 50, 100, 'hp', 'HP'),
@@ -130,10 +145,14 @@ class Game(State):
         self.slashes = []
         
         self.loop_duration = 60
-        self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
-                              ParticleGenerator.from_template((300, 200), 'color test')]
+        self.particle_gens = []
+        # self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
+        #                       ParticleGenerator.from_template((300, 200), 'color test')]
 
         self.loop_block = Entity((10, y), 'loop_block')
+
+        rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
+        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+120+i*20, 120, 16) for i in range(20)]
 
         self.snap_positions = [(30, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
@@ -143,18 +162,32 @@ class Game(State):
             Block(3, 'slash', rects[2], 'Slash', 'purple', disabled=True),
             Block(3, 'hp', rects[3], 'Get 1 HP', 'red', disabled=True),
             Block(3, 'gold', rects[4], 'Get 1 Gold', 'yellow', disabled=True),
-            Block(self.loop_duration, 'wait',
+
+        ]
+
+        self.locked_blocks = [
+            Block(3, 'projectile', locked_rects[0], 'Projectile', 'purple', disabled=True),
+        ]
+
+        for block in self.locked_blocks:
+            block.locked = True
+            block.generate_surf()
+        self.blocks += self.locked_blocks
+
+
+        wait_block = Block(self.loop_duration, 'wait',
                   pygame.Rect(*self.snap_positions[-1],
                               *rects[0].size), 
-                  'Wait 1 sec', preset='wait'),
-        ]
+                  'Wait 1 sec', preset='wait')
+        self.blocks.append(wait_block)
+
+
+        self.slots[-1] = wait_block
         self.block_i = 0
         self.just_switched = True
         # self.timer = Timer(1)
 
-        self.blocks[-1].locked = True
-        self.blocks[-1].generate_surf()
-        self.slots[-1] = self.blocks[-1]
+
 
         self.buttons = {
 
@@ -162,6 +195,44 @@ class Game(State):
         self.arrow = Animation.img_db['arrow']
 
         self.selected_block = None
+
+        self.shop = Entity((333, 0), 'shop')
+
+        # self.shop_entrance = (
+        #     (280, 0),
+        #     (290, 25),
+        #     (315, 46),
+        #     (350, 70),
+        #     (390, 67),
+        #     (422, 37),
+        #     (432, 10),
+        #     (438, 0),
+        # )
+        self.shop_entrance = []
+
+        center = (364, 0)
+        radius = 64
+        detail = 16
+        surround = 0.2
+        for i in range(detail):
+            angle = math.pi-surround + (i / (detail-1)) * (math.pi + 2*surround)
+            point = radius * Vector2(math.cos(angle), -math.sin(angle))
+            point += center
+            self.shop_entrance.append(point)
+
+        self.random_points = self.shop_entrance.copy()
+        for i in range(len(self.random_points)):
+            point = self.random_points[i].copy()
+
+            random_angle = uniform(0, 2*math.pi)
+            v = 2*Vector2(math.cos(random_angle), math.sin(random_angle))
+            point += v
+            v.scale_to_length(0.2)
+            point = [point[0], point[1]] + [-v.y, v.x]
+            self.random_points[i] = point
+
+        self.mode = 'game'
+        self.shop_timer = None
 
     def sub_update(self):
 
@@ -172,16 +243,17 @@ class Game(State):
 
 
         # self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
-        # for particle_gen in self.particle_gens:
-        #     particle_gen.render(self.handler.canvas)
 
         for projectile in self.projectiles:
-            projectile.update()
+            if self.mode == 'game':
+                projectile.update()
             projectile.render(self.handler.canvas)
 
         new_slashes = []
         for slash in self.slashes:
-            done = slash.update()
+            done = False
+            if self.mode == 'game':
+                done = slash.update()
             if done:
                 continue
             else:
@@ -232,7 +304,15 @@ class Game(State):
             elif block.id == 'gold':
                 self.gold += 1
 
-        self.timer.update()
+        if self.mode == 'game':
+            self.timer.update()
+
+        if self.shop_timer:
+            if self.shop_timer.done:
+                self.shop_timer = None
+            else:
+                self.shop_timer.update()
+
         if self.timer.done:
             self.just_switched = True
 
@@ -241,6 +321,140 @@ class Game(State):
 
         if self.handler.inputs['released'].get('mouse1'):
             self.selected_block = None
+
+
+
+
+        # Update Buttons
+        for key, btn in self.buttons.items():
+            btn.update(self.handler.inputs)
+            btn.render(self.handler.canvas)
+
+        # Update bars
+        for key, bar in self.bars.items():
+            bar.render(self.handler.canvas)
+
+        self.handler.canvas.blit(FONTS['basic'].get_surf(f'{self.gold}'), (10, 30))
+
+        # shop
+        # pygame.draw.polygon(self.handler.canvas, COLORS['black'], self.shop_entrance)
+        pygame.draw.polygon(self.handler.canvas, COLORS['blue'], [(p[0], p[1]) for p in self.random_points ])
+        pygame.draw.polygon(self.handler.canvas, COLORS['black'], [(p[0], p[1]) for p in self.random_points ], width=3)
+        self.shop.render(self.handler.canvas)
+
+        # update enemy
+        new_enemies = []
+        for enemy in self.enemies:
+            if enemy.name == 'enemy':
+                enemy.vel = -enemy.pos + self.entity.pos
+                enemy.animation.flip[0] = enemy.vel[0] < 0
+
+                if self.shop_timer:
+                    ratio = self.shop_timer.ratio
+                else:
+                    ratio = 0
+                # enemy._real_pos = Vector2(300+100*ratio, 100)
+
+            done = False
+            if self.mode == 'game':
+                done = enemy.update(self.walls)
+
+            if done and enemy.animation.action == 'hit':
+                enemy.animation.set_action('run')
+
+            for slash in self.slashes:
+                if enemy not in slash.enemies and enemy.rect.colliderect(slash.rect):
+                    slash.enemies.append(enemy)
+                    enemy.animation.set_action('hit')
+                    enemy.bar.change_val(-5)
+            for projectile in self.projectiles:
+                if enemy not in projectile.enemies and enemy.rect.colliderect(projectile.rect):
+                    projectile.enemies.append(enemy)
+                    enemy.animation.set_action('hit')
+                    print(f'before: {enemy.bar.value=}')
+                    enemy.bar.change_val(-4)
+                    print(f'after: {enemy.bar.value=}')
+            enemy.render(self.handler.canvas)
+            enemy.bar.rect.midbottom = enemy.rect.midtop
+            enemy.bar.render(self.handler.canvas)
+            
+            if enemy.bar.value > 0:
+                new_enemies.append(enemy)
+            else:
+                pass
+                # particle stuff here TODO
+
+        self.enemies = new_enemies
+
+        # pygame.draw.polygon(self.handler.canvas, COLORS['blue1'], self.shop_entrance)
+        for i, point in enumerate(self.random_points):
+            pos = point[0], point[1]
+            vel = point[2], point[3]
+            difference = self.shop_entrance[i] - Vector2(pos)
+            if difference.length() == 0: difference = Vector2(1, 0)
+            difference.scale_to_length(0.01)
+            vel += difference
+            pos = Vector2(pos) + vel
+            self.random_points[i] = (*pos, *vel)
+
+
+        # Update player
+        self.entity.vel = [0, 0]
+        if self.handler.inputs['held'].get('a'):
+            self.entity.vel[0] -= self.e_speed
+            self.entity.animation.flip[0] = True
+        elif self.handler.inputs['held'].get('d'):
+            self.entity.vel[0] += self.e_speed
+            self.entity.animation.flip[0] = False
+        if self.handler.inputs['held'].get('w'):
+            self.entity.vel[1] -= self.e_speed
+        elif self.handler.inputs['held'].get('s'):
+            self.entity.vel[1] += self.e_speed
+
+        if any(self.entity.vel):
+            self.entity.animation.set_action('run')
+        else:
+            self.entity.animation.set_action('idle')
+
+        self.entity.update(self.walls)
+        self.entity.render(self.handler.canvas)
+
+        if self.entity.rect.colliderect(self.shop.rect):
+            # self.entity._real_pos = Vector2(340, 80)
+            if self.mode == 'game':
+                self.particle_gens.append(ParticleGenerator.from_template(self.entity.rect.center, 'shards'))
+                print('setting shop')
+                if self.shop_timer:
+                    offset = self.SHOP_SPEED - self.shop_timer.frame
+                    self.shop_timer = Timer(self.SHOP_SPEED)
+                    self.shop_timer.frame = offset
+                else:
+                    self.shop_timer = Timer(self.SHOP_SPEED)
+            self.mode = 'shop'
+        else:
+            if self.mode == 'shop':
+                if self.shop_timer:
+                    offset = self.SHOP_SPEED - self.shop_timer.frame
+                    self.shop_timer = Timer(self.SHOP_SPEED)
+                    self.shop_timer.frame = offset
+                else:
+                    self.shop_timer = Timer(self.SHOP_SPEED)
+
+            self.mode = 'game'
+
+        # if self.handler.inputs['held'].get('mouse1'):
+        #     for wall in self.walls:
+        #         pygame.draw.rect(self.handler.canvas, (200, 200, 0), wall)
+
+        self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
+        for particle_gen in self.particle_gens:
+            particle_gen.render(self.handler.canvas)
+
+        # if self.mode == 'shop':
+        self.render_shop()
+
+
+        # block ---------------------------
 
         clicked_blocks = []
         for block in self.blocks:
@@ -281,60 +495,12 @@ class Game(State):
                     self.selected_block.rect.topleft = pos
                     self.selected_block = None
                     break
+        # -----------------------------------
 
 
 
-        # Update Buttons
-        for key, btn in self.buttons.items():
-            btn.update(self.handler.inputs)
-            btn.render(self.handler.canvas)
 
-        # Update bars
-        for key, bar in self.bars.items():
-            bar.render(self.handler.canvas)
 
-        self.handler.canvas.blit(FONTS['basic'].get_surf(f'{self.gold}'), (10, 30))
-
-        # update enemy
-        for enemy in self.enemies:
-            if enemy.name == 'enemy':
-                enemy.vel = -enemy.pos + self.entity.pos
-                enemy.animation.flip[0] = enemy.vel[0] < 0
-
-            done = enemy.update(self.walls)
-            if done and enemy.animation.action == 'hit':
-                enemy.animation.set_action('run')
-
-            for slash in self.slashes:
-                if enemy not in slash.enemies and enemy.rect.colliderect(slash.rect):
-                    slash.enemies.append(enemy)
-                    enemy.animation.set_action('hit')
-            enemy.render(self.handler.canvas)
-
-        # Update player
-        self.entity.vel = [0, 0]
-        if self.handler.inputs['held'].get('a'):
-            self.entity.vel[0] -= self.e_speed
-            self.entity.animation.flip[0] = True
-        elif self.handler.inputs['held'].get('d'):
-            self.entity.vel[0] += self.e_speed
-            self.entity.animation.flip[0] = False
-        if self.handler.inputs['held'].get('w'):
-            self.entity.vel[1] -= self.e_speed
-        elif self.handler.inputs['held'].get('s'):
-            self.entity.vel[1] += self.e_speed
-
-        if any(self.entity.vel):
-            self.entity.animation.set_action('run')
-        else:
-            self.entity.animation.set_action('idle')
-
-        self.entity.update(self.walls)
-        self.entity.render(self.handler.canvas)
-
-        # if self.handler.inputs['held'].get('mouse1'):
-        #     for wall in self.walls:
-        #         pygame.draw.rect(self.handler.canvas, (200, 200, 0), wall)
 
 
         # text ----------
@@ -345,7 +511,7 @@ class Game(State):
 
 
                 ]
-        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (300, 0))
+        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (150, 200))
 
 
         self.loop_block.update()
@@ -354,6 +520,36 @@ class Game(State):
         self.handler.canvas.blit(self.arrow, (14, self.snap_positions[self.block_i][1]+6))
 
         # Shader -----
-        # shader_handler.vars['caTimer'] = -1 if not self.timer else self.timer.ratio ** 2
+        if self.shop_timer: print(f'{self.shop_timer.ratio=}')
+        shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' else -1
 
         self.first_loop = False
+
+    def render_shop(self):
+        x_displacement = 176
+        if self.shop_timer is None:
+            if self.mode == 'game':
+                return
+            ratio = 1
+
+
+        else:
+            ratio = (self.shop_timer.ratio )
+
+            if self.mode == 'game':
+                ratio = 1-ratio
+
+            ratio = ratio ** 0.4
+
+
+        pos = (config.CANVAS_SIZE[0] - x_displacement*ratio, 100)
+
+
+
+        for block in self.locked_blocks:
+            block.rect.x = pos[0] + 10
+
+
+        shop_bg = Animation.img_db['shop_bg']
+        # pos = (config.CANVAS_SIZE[0] - x_displacement*ratio, 0)
+        self.handler.canvas.blit(shop_bg, pos)
