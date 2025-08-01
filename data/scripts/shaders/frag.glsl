@@ -10,7 +10,7 @@ out vec4 f_color;
 
 const float PI = 3.14159265359;
 const vec2 gridSize = vec2(64, 64);
-const float caCoef = 0.005;
+const float caCoef = 0.003;
 const float shakeCoef = 0.01;
 
 vec2 rotateVec(vec2 vec, float theta) {
@@ -35,6 +35,7 @@ void main() {
         vec4 caSample3 = texture(canvasTex, uvs - rotateVec(shakeSampleVec, 4.0*PI/3.0));
         vec4 sampleMix = mix( mix(caSample1, caSample2, 0.5), caSample3, 0.5 );
         f_color = mix(f_color, sampleMix, 0.5);
+        f_color = mix(f_color, vec4(0.3, 0, 0, 0), centerDist*0.5*(1-shakeTimer));
     }
 
     // Chromatic abberation

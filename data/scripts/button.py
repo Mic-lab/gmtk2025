@@ -9,7 +9,7 @@ class Button:
 
     presets = {
         'basic': {
-            'colors': {'border': [91, 77, 76], 
+            'colors': {'border': COLORS['black'], 
                        'fill': [151, 134, 125], 
                        'text': [240, 240, 240] }
         },
@@ -56,10 +56,13 @@ class Button:
     def colors(self):
         base_colors = deepcopy(self.presets[self.preset]['colors'])
         if self.disabled:
-            h, s, v = self.rgb_to_hsv(base_colors['fill'])
-            # v *= 0.5
-            s *= 0.5
-            base_colors['fill'] = self.hsv_to_rgb((h, s, v))
+            if self.preset == 'basic':
+                base_colors['fill'] = (89, 86, 82)
+            else:
+                h, s, v = self.rgb_to_hsv(base_colors['fill'])
+                # v *= 0.5
+                s *= 0.4
+                base_colors['fill'] = self.hsv_to_rgb((h, s, v))
 
         if not self.hovered:
             return base_colors

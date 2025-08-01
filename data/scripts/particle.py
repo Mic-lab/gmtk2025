@@ -1,4 +1,6 @@
 import random
+
+from data.scripts import config
 from .timer import Timer
 from .entity import PhysicsEntity
 from . import utils
@@ -62,6 +64,16 @@ class ParticleGenerator:
             'base_particle': Particle(action='basic', vel=(0, 0)),
             'vel_randomness': 0.5,
             'rate': 10
+        },
+        'big': {
+            'base_particle': Particle(action='big', vel=(0, -0.5)),
+            'vel_randomness': 0.3,
+            'rate': 5
+        },
+        'shock': {
+            'base_particle': Particle(action='loop', vel=(0, 0), color=config.COLORS['black']),
+            'vel_randomness': 0,
+            'rate': 1
         },
         'angle test': {
             'base_particle': Particle(action='arrow', vel=(0, -2), acceleration=(0, 0.05), angled=True, color=(50, 100, 240)),

@@ -28,6 +28,7 @@ class Projectile(PhysicsEntity):
         self._img = pygame.transform.rotate(base_img, angle)
         self._real_pos = self._real_pos - 0.5*Vector2(self._img.get_size())
         self.enemies = []
+        self.dead = False
 
     @property
     def img(self):
@@ -116,6 +117,8 @@ class Game(State):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.game_over = False
+
         bg_size = 176
         wall_width = 30
 
@@ -129,17 +132,21 @@ class Game(State):
         # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
 
         self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
+        self.player = self.entity
+
+        self.entity.invincible = None
         self.e_speed = 1.5
 
         self.enemies = []
         enemy = PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
         enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 10, 10, 'enemy')
+        enemy.dmg = 10
         self.enemies.append(enemy)
 
         self.bars = {
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 50, 100, 'hp', 'HP'),
         }
-        self.gold = 0
+        self.gold = 999
 
         self.projectiles=[]
         self.slashes = []
@@ -158,16 +165,33 @@ class Game(State):
         self.slots = [None for i in range(len(self.snap_positions))]
         self.blocks = [
             Block(3, 'hp', rects[0], 'Get 1 HP', 'red', disabled=True),
-            Block(3, 'projectile', rects[1], 'Projectile', 'purple', disabled=True),
-            Block(3, 'slash', rects[2], 'Slash', 'purple', disabled=True),
-            Block(3, 'hp', rects[3], 'Get 1 HP', 'red', disabled=True),
-            Block(3, 'gold', rects[4], 'Get 1 Gold', 'yellow', disabled=True),
+            Block(3, 'slash', rects[1], 'Slash', 'purple', disabled=True),
+            Block(3, 'gold', rects[2], 'Get 1 Gold', 'yellow', disabled=True),
 
         ]
 
         self.locked_blocks = [
-            Block(3, 'projectile', locked_rects[0], 'Projectile', 'purple', disabled=True),
+            Block(3, 'gold', locked_rects[0], 'Get 1 gold', 'yellow', disabled=True),
+            Block(3, 'gold', locked_rects[1], 'Get 1 gold', 'yellow', disabled=True),
+            Block(3, 'hp', locked_rects[2], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'projectile', locked_rects[3], 'Projectile', 'purple', disabled=True),
+            Block(30, 'ghost', locked_rects[4], 'Ghost mode', 'purple', disabled=True),
         ]
+
+        self.prices = [15,
+                       20,
+                       20,
+                       20,
+                       25]
+
+        self.price_buttons = []
+        for i, price in enumerate(self.prices):
+            rect = locked_rects[i].copy()
+            rect.x += 50
+            rect.w = 60
+            btn = Button(rect, f'Buy [{price}$]', preset='basic')
+            btn.price = price
+            self.price_buttons.append(btn)
 
         for block in self.locked_blocks:
             block.locked = True
@@ -244,10 +268,26 @@ class Game(State):
 
         # self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
 
+        new_projectiles = []
         for projectile in self.projectiles:
+            if projectile.dead:
+                particle = ParticleGenerator.TEMPLATES['smoke']['base_particle'].copy()
+                particle.vel = projectile.vel * 0.3
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(projectile.rect.center, 'smoke', base_particle=particle)
+                )
+                break
+
             if self.mode == 'game':
                 projectile.update()
+
+                for wall in self.walls:
+                    if projectile.rect.colliderect(wall):
+                        projectile.dead = True
+
             projectile.render(self.handler.canvas)
+            new_projectiles.append(projectile)
+        self.projectiles = new_projectiles
 
         new_slashes = []
         for slash in self.slashes:
@@ -313,6 +353,14 @@ class Game(State):
             else:
                 self.shop_timer.update()
 
+        if self.entity.invincible:
+            if self.entity.invincible.done:
+                self.entity.invincible = None
+            else:
+                self.entity.invincible.update()
+
+
+
         if self.timer.done:
             self.just_switched = True
 
@@ -367,13 +415,18 @@ class Game(State):
                     slash.enemies.append(enemy)
                     enemy.animation.set_action('hit')
                     enemy.bar.change_val(-5)
+
             for projectile in self.projectiles:
                 if enemy not in projectile.enemies and enemy.rect.colliderect(projectile.rect):
                     projectile.enemies.append(enemy)
                     enemy.animation.set_action('hit')
-                    print(f'before: {enemy.bar.value=}')
                     enemy.bar.change_val(-4)
-                    print(f'after: {enemy.bar.value=}')
+                    projectile.dead = True
+
+            if enemy.rect.colliderect(self.entity.rect) and not self.entity.invincible and not self.game_over:
+                self.entity.invincible = Timer(60)
+                self.bars['hp'].change_val(-enemy.dmg)
+
             enemy.render(self.handler.canvas)
             enemy.bar.rect.midbottom = enemy.rect.midtop
             enemy.bar.render(self.handler.canvas)
@@ -381,7 +434,15 @@ class Game(State):
             if enemy.bar.value > 0:
                 new_enemies.append(enemy)
             else:
-                pass
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(enemy.rect.center, 'big')
+                )
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(enemy.rect.center, 'smoke')
+                )
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(enemy.rect.center, 'shock')
+                )
                 # particle stuff here TODO
 
         self.enemies = new_enemies
@@ -423,7 +484,6 @@ class Game(State):
             # self.entity._real_pos = Vector2(340, 80)
             if self.mode == 'game':
                 self.particle_gens.append(ParticleGenerator.from_template(self.entity.rect.center, 'shards'))
-                print('setting shop')
                 if self.shop_timer:
                     offset = self.SHOP_SPEED - self.shop_timer.frame
                     self.shop_timer = Timer(self.SHOP_SPEED)
@@ -519,14 +579,24 @@ class Game(State):
 
         self.handler.canvas.blit(self.arrow, (14, self.snap_positions[self.block_i][1]+6))
 
+
+
+
+
+        if self.bars['hp'].value == 0:
+            self.game_over = True
+            self.handler.transition_to(self.handler.states.Menu)
+            self.entity.invincible = None
+
         # Shader -----
-        if self.shop_timer: print(f'{self.shop_timer.ratio=}')
         shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' else -1
+        shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio
 
         self.first_loop = False
 
     def render_shop(self):
-        x_displacement = 176
+        x_displacement = Animation.img_db['shop_bg'].get_width()
+
         if self.shop_timer is None:
             if self.mode == 'game':
                 return
@@ -547,9 +617,42 @@ class Game(State):
 
 
         for block in self.locked_blocks:
-            block.rect.x = pos[0] + 10
+            if block is None: continue
+            block.rect.x = pos[0] + 5
 
+
+        
 
         shop_bg = Animation.img_db['shop_bg']
         # pos = (config.CANVAS_SIZE[0] - x_displacement*ratio, 0)
         self.handler.canvas.blit(shop_bg, pos)
+
+        clicked_button = None
+
+        for i, button in enumerate(self.price_buttons):
+            
+            if button.text != 'Sold!':
+                button_disabled_old = button.disabled
+                button.disabled = button.price > self.gold
+                if button_disabled_old != button.disabled:
+                    button.generate_surf()
+
+
+            button.rect.x = pos[0] + 5 + 120 + 5
+            button.update(self.handler.inputs)
+            button.render(self.handler.canvas)
+
+            if button.clicked:
+                if not button.disabled:
+                    clicked_button = button, i
+
+        if clicked_button:
+            # TODO: more feedback for purchase
+
+            i = clicked_button[1]
+            self.locked_blocks[i].locked = False
+            self.locked_blocks[i].generate_surf()
+            self.locked_blocks[i] = None
+
+            clicked_button[0].disabled = True
+            clicked_button[0].text = 'Sold!'
