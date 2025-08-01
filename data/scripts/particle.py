@@ -68,7 +68,7 @@ class ParticleGenerator:
         'big': {
             'base_particle': Particle(action='big', vel=(0, -0.5)),
             'vel_randomness': 0.3,
-            'rate': 5
+            'rate': 3
         },
         'shock': {
             'base_particle': Particle(action='loop', vel=(0, 0), color=config.COLORS['black']),

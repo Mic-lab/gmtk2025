@@ -36,6 +36,7 @@ class Projectile(PhysicsEntity):
         return self._img
 
 class Bar:
+    changes = []
 
     STYLES = {
         'hp': {
@@ -91,6 +92,18 @@ class Bar:
         elif self.value < 0:
             self.value = 0
         self.generate_surf()
+
+        if self.style == 'hp':
+            if change > 0:
+                str_change = f'+{change}'
+                color = (0, 255, 0)
+            else:
+                str_change = str(change)
+                color = (255, 50, 50)
+
+
+            s = FONTS['basic'].get_surf(str_change, color=color)
+            self.changes.append([s, 255, self.rect.midright + pygame.Vector2(5, -5)])
 
     def render(self, canvas):
         canvas.blit(self.surf, self.rect.topleft)
@@ -149,18 +162,20 @@ class Game(State):
         self.game_over = False
 
         bg_size = 176
-        wall_width = 30
+        wall_width = 60
 
-        self.walls = [pygame.Rect(bg_size-30, -wall_width, 30, config.SCREEN_SIZE[1]),
-                      pygame.Rect(config.CANVAS_SIZE[0], 0, 30, config.SCREEN_SIZE[1]),
-                      pygame.Rect(bg_size-wall_width, -wall_width, config.CANVAS_SIZE[0], 30),
-                      pygame.Rect(0, config.CANVAS_SIZE[1], config.CANVAS_SIZE[0], 30)]
+        self.walls = [pygame.Rect(bg_size-wall_width, -wall_width, wall_width, config.SCREEN_SIZE[1]),
+                      pygame.Rect(config.CANVAS_SIZE[0], 0, wall_width, config.SCREEN_SIZE[1]),
+                      pygame.Rect(bg_size-wall_width, -wall_width, config.CANVAS_SIZE[0], wall_width),
+                      pygame.Rect(0, config.CANVAS_SIZE[1], config.CANVAS_SIZE[0], wall_width)]
 
 
         y = 70
         # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
 
         self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
+        self.entity.dashing = None
+        self.entity.cooldown = None
         self.player = self.entity
 
         self.entity.invincible = None
@@ -193,7 +208,7 @@ class Game(State):
         self.loop_block = Entity((10, y), 'loop_block')
 
         rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
-        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+90+i*20, 120, 16) for i in range(20)]
+        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+80+i*20, 120, 16) for i in range(20)]
 
         self.snap_positions = [(30, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
@@ -206,19 +221,21 @@ class Game(State):
 
         self.locked_blocks = [
             Block(3, 'gold', locked_rects[0], 'Get 1 gold', 'yellow', disabled=True),
-            Block(3, 'gold', locked_rects[1], 'Get 1 gold', 'yellow', disabled=True),
-            Block(3, 'hp', locked_rects[2], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'hp', locked_rects[1], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'slash', locked_rects[2], 'Slash', 'purple', disabled=True),
             Block(3, 'projectile', locked_rects[3], 'Projectile', 'purple', disabled=True),
             Block(3, 'projectile', locked_rects[4], 'Projectile', 'purple', disabled=True),
-            Block(15, 'dash', locked_rects[5], 'Dash', 'blue', disabled=True),
+            Block(3, 'fire', locked_rects[5], 'Ignite', 'orange', disabled=True),
+            Block(15, 'water', locked_rects[6], 'Water', 'blue', disabled=True),
         ]
 
         self.prices = [15,
-                       20,
-                       20,
-                       20,
-                       20,
-                       15]
+                       30,
+                       25,
+                       25,
+                       25,
+                       40,
+                       50,]
 
         self.price_buttons = []
         for i, price in enumerate(self.prices):
@@ -254,7 +271,11 @@ class Game(State):
 
         for block in self.blocks:
             if block.id == 'slash':
-                block.description = 'Horizontal melee attack at the\ndirection of your mouse'
+                block.description = 'Horizontal melee attack at the\ndirection of your mouse\nWhen combined with a dash,\ndamage is doubled.'
+            elif block.id == 'dash':
+                block.description = 'Teleports towards direction of\nplayer movement.\nDifficult to use.'
+            elif block.id == 'projectile':
+                block.description = 'Shoots an arrow at mouse position.'
             else:
                 block.description = ''
 
@@ -310,9 +331,9 @@ class Game(State):
         self.time_passed = 0
 
     def sub_update(self):
-
         # bg ------------
-        self.handler.canvas.fill(COLORS['green3'])
+        # self.handler.canvas.fill(COLORS['green3'])
+        self.handler.canvas.blit(Animation.img_db['bg'], (0, 0))
         # pygame.draw.rect(self.handler.canvas, (80, 80, 80), (0, 0, 180, config.SCREEN_SIZE[1]))
         self.handler.canvas.blit(Animation.img_db['scratch_bg'], (0, 0))
 
@@ -327,7 +348,7 @@ class Game(State):
                 self.particle_gens.append(
                     ParticleGenerator.from_template(projectile.rect.center, 'smoke', base_particle=particle)
                 )
-                break
+                continue
 
             if self.mode == 'game':
                 projectile.update()
@@ -377,28 +398,42 @@ class Game(State):
             elif block.id == 'slash':
                 # slash_pos = Vector2(self.entity.rect.center) - self.handler.inputs['mouse pos']
                 # mouse_dist.scale_to_length(8)
-                slash = PhysicsEntity(vel=self.entity.vel.copy(), pos=(0,0), name='slash', action='idle')
+                slash_pos = self.entity.rect.center
+
+
+                vel = self.entity.vel.copy()
+                if vel.length() > 3:
+                    slash = PhysicsEntity(vel=vel, pos=(0,0), name='super_slash', action='idle')
+                    if vel.x < 0:
+                        coef = -1
+                        flip = True
+                    else:
+                        coef = 1
+                        flip = False
+                else:
+                    slash = PhysicsEntity(vel=vel, pos=(0,0), name='slash', action='idle')
+                    if slash_pos[0] - self.handler.inputs['mouse pos'][0] > 0:
+                        coef = -1
+                        flip = True
+                    else:
+                        coef = 1
+                        flip = False
+
+                slash_pos = (slash_pos[0] + coef*16 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
                 slash.enemies = []
 
-                slash_pos = self.entity.rect.center
-                if slash_pos[0] - self.handler.inputs['mouse pos'][0] > 0:
-                    coef = -1
-                    flip = True
-                else:
-                    coef = 1
-                    flip = False
-                slash_pos = (slash_pos[0] + coef*16 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
                 slash._real_pos = slash_pos
                 slash.animation.flip = (flip, False)
                 
                 self.slashes.append(slash)
             elif block.id == 'gold':
                 self.gold += 1
+                Bar.changes.append([FONTS['basic'].get_surf('+1', (0, 255, 0)), 255,  (10, 25) +  uniform(0, 15)*Vector2(1, 0.3) ])
             elif block.id == 'dash':
                 self.particle_gens.append(
                     ParticleGenerator.from_template(self.entity.rect.center, 'player')
                 )
-                self.entity._real_pos += self.entity.vel * 20
+                self.entity._real_pos += self.entity.vel * 50
 
         if self.mode == 'game':
             self.timer.update()
@@ -450,7 +485,7 @@ class Game(State):
 
         self.t1 = time()
         if self.mode == 'game':
-            self.time_passed += (self.t1 - self.t0)
+            self.time_passed += (self.t1 - self.t0)*1
         
             self.enemy_interval = 3 * (1 / (0.01*self.time_passed + 1))
 
@@ -485,9 +520,11 @@ class Game(State):
 
         self.t0 = time()
 
-        new_enemies = []
+
         for enemy in self.enemies:
-            # if enemy.name == 'enemy':
+
+
+            # update 
             enemy.vel = -enemy.pos + self.entity.pos
             enemy.animation.flip[0] = enemy.vel[0] < 0
                 # enemy._real_pos = Vector2(300+100*ratio, 100)
@@ -495,6 +532,35 @@ class Game(State):
             done = False
             if self.mode == 'game':
                 done = enemy.update(self.walls)
+                
+
+
+            # shadow
+
+            center = list(enemy.rect.midbottom)
+            center[1] -= 3
+
+            w = enemy.rect.w + 5
+            h = 10
+            rect = pygame.Rect(
+                center[0] - w*0.5, 
+                center[1] - h*0.5,
+                w,
+                h
+            )
+            s = pygame.Surface(rect.size)
+
+            r = rect.copy()
+            r.topleft = (0, 0)
+            pygame.draw.ellipse(s, (0, 0, 10), r)
+            s.set_colorkey((0, 0, 0))
+            s.set_alpha(100)
+            self.handler.canvas.blit(s, rect.topleft)
+
+
+
+        new_enemies = []
+        for enemy in self.enemies:
 
             if done and enemy.animation.action == 'hit':
                 enemy.animation.set_action('run')
@@ -503,7 +569,10 @@ class Game(State):
                 if enemy not in slash.enemies and enemy.rect.colliderect(slash.rect):
                     slash.enemies.append(enemy)
                     enemy.animation.set_action('hit')
-                    enemy.bar.change_val(-5)
+                    if slash.name == 'slash':
+                        enemy.bar.change_val(-5)
+                    else:
+                        enemy.bar.change_val(-10)
 
             for projectile in self.projectiles:
                 if enemy not in projectile.enemies and enemy.rect.colliderect(projectile.rect):
@@ -549,22 +618,44 @@ class Game(State):
 
 
         # Update player
-        self.entity.vel = [0, 0]
-        if self.handler.inputs['held'].get('a'):
-            self.entity.vel[0] -= self.e_speed
-            self.entity.animation.flip[0] = True
-        elif self.handler.inputs['held'].get('d'):
-            self.entity.vel[0] += self.e_speed
-            self.entity.animation.flip[0] = False
-        if self.handler.inputs['held'].get('w'):
-            self.entity.vel[1] -= self.e_speed
-        elif self.handler.inputs['held'].get('s'):
-            self.entity.vel[1] += self.e_speed
 
-        if any(self.entity.vel):
-            self.entity.animation.set_action('run')
+        if not self.entity.dashing:
+            self.entity.max_vel = 1.5
+            self.entity.vel = [0, 0]
+            if self.handler.inputs['held'].get('a'):
+                self.entity.vel[0] -= self.e_speed
+                self.entity.animation.flip[0] = True
+            elif self.handler.inputs['held'].get('d'):
+                self.entity.vel[0] += self.e_speed
+                self.entity.animation.flip[0] = False
+            if self.handler.inputs['held'].get('w'):
+                self.entity.vel[1] -= self.e_speed
+            elif self.handler.inputs['held'].get('s'):
+                self.entity.vel[1] += self.e_speed
+
+            if any(self.entity.vel):
+                self.entity.animation.set_action('run')
+            else:
+                self.entity.animation.set_action('idle')
+
+            if self.handler.inputs['pressed'].get('space') and not self.entity.cooldown:
+                self.entity.cooldown = Timer(20)
+                self.entity.dashing = Timer(10)
+                self.entity.max_vel = 5
+                self.entity.vel = pygame.Vector2(self.entity.vel) * 5
+
+            if self.entity.cooldown:
+                self.entity.cooldown.update()
+                if self.entity.cooldown.done:
+                    self.entity.cooldown = None
         else:
-            self.entity.animation.set_action('idle')
+            self.particle_gens.append(
+                ParticleGenerator.from_template(self.entity.rect.center, 'player')
+            )
+            self.entity.dashing.update()
+            done = self.entity.dashing.done
+            if done: self.entity.dashing = None
+            print(self.entity.dashing, self.entity.max_vel, self.entity.vel)
 
         self.entity.update(self.walls)
         self.entity.render(self.handler.canvas)
@@ -592,12 +683,25 @@ class Game(State):
             self.mode = 'game'
 
         # if self.handler.inputs['held'].get('mouse1'):
-        #     for wall in self.walls:
-        #         pygame.draw.rect(self.handler.canvas, (200, 200, 0), wall)
+            # for wall in self.walls:
+            #     pygame.draw.rect(self.handler.canvas, (200, 200, 0), wall)
 
         self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
         for particle_gen in self.particle_gens:
             particle_gen.render(self.handler.canvas)
+
+        new_changes = []
+        for change in Bar.changes:
+            img, alpha, pos = change
+            if alpha <= 0:
+                continue
+
+            img.set_alpha(alpha)
+            self.handler.canvas.blit(img, pos)
+            change[1] -= 15
+            new_changes.append(change)
+            change[2] += Vector2(uniform(-1, 1), uniform(-1, 1))
+        Bar.changes = new_changes
 
         # if self.mode == 'shop':
         self.render_shop()
@@ -649,7 +753,7 @@ class Game(State):
 
         self.alpha = self.block_hover_timer/10*255
 
-        print(f'{self.alpha=}')
+        # print(f'{self.alpha=}')
 
         if self.alpha != 0:
 
@@ -711,14 +815,19 @@ class Game(State):
 
 
 
+        # Shader -----
+
         if self.bars['hp'].value == 0:
             self.game_over = True
             self.handler.transition_to(self.handler.states.Menu)
             self.entity.invincible = None
 
-        # Shader -----
-        shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' else -1
-        shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio
+            shader_handler.vars['caTimer'] = -1
+            shader_handler.vars['shakeTimer'] = -1 
+        else:
+
+            shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' else -1
+            shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio
 
         self.first_loop = False
 
@@ -776,6 +885,8 @@ class Game(State):
 
         if clicked_button:
             # TODO: more feedback for purchase
+
+            self.gold -= clicked_button[0].price
 
             i = clicked_button[1]
             self.locked_blocks[i].locked = False

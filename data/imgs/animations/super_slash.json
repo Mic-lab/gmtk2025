@@ -1,0 +1,41 @@
+{ "frames": [
+   {
+    "filename": "idle",
+    "frame": { "x": 0, "y": 0, "w": 11, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 17, "y": 5, "w": 11, "h": 20 },
+    "sourceSize": { "w": 43, "h": 32 },
+    "duration": 150
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 11, "y": 0, "w": 11, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 17, "y": 5, "w": 11, "h": 20 },
+    "sourceSize": { "w": 43, "h": 32 },
+    "duration": 150
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 22, "y": 0, "w": 11, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 17, "y": 5, "w": 11, "h": 20 },
+    "sourceSize": { "w": 43, "h": 32 },
+    "duration": 150
+   }
+ ],
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.x-dev",
+  "image": "super_slash.png",
+  "format": "RGBA8888",
+  "size": { "w": 33, "h": 20 },
+  "scale": "1",
+  "slices": [
+   { "name": "rect", "color": "#0000ffff", "keys": [{ "frame": 0, "bounds": {"x": 0, "y": 0, "w": 43, "h": 32 } }] }
+  ]
+ }
+}
