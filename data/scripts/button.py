@@ -28,6 +28,11 @@ class Button:
                        'border': COLORS['black'], 
                        'text': [240, 240, 240] }
         },
+        'blue': {
+            'colors': {'fill': COLORS['blue1'], 
+                       'border': COLORS['black'], 
+                       'text': [240, 240, 240] }
+        },
         'wait': {
             'colors': {'fill': COLORS['blue'], 
                        'border': COLORS['black'], 

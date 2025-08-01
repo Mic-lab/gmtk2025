@@ -175,7 +175,7 @@ class Game(State):
             Block(3, 'gold', locked_rects[1], 'Get 1 gold', 'yellow', disabled=True),
             Block(3, 'hp', locked_rects[2], 'Get 1 HP', 'red', disabled=True),
             Block(3, 'projectile', locked_rects[3], 'Projectile', 'purple', disabled=True),
-            Block(30, 'ghost', locked_rects[4], 'Ghost mode', 'purple', disabled=True),
+            Block(15, 'dash', locked_rects[4], 'Dash', 'blue', disabled=True),
         ]
 
         self.prices = [15,
@@ -203,6 +203,10 @@ class Game(State):
                   pygame.Rect(*self.snap_positions[-1],
                               *rects[0].size), 
                   'Wait 1 sec', preset='wait')
+
+        wait_block.locked = True
+        wait_block.generate_surf()
+
         self.blocks.append(wait_block)
 
 
@@ -212,6 +216,11 @@ class Game(State):
         # self.timer = Timer(1)
 
 
+        for block in self.blocks:
+            if block.id == 'slash':
+                block.description = 'Horizontal melee attack at the\ndirection of your mouse'
+            else:
+                block.description = ''
 
         self.buttons = {
 
@@ -257,6 +266,7 @@ class Game(State):
 
         self.mode = 'game'
         self.shop_timer = None
+        self.block_hover_timer = 0
 
     def sub_update(self):
 
@@ -343,6 +353,11 @@ class Game(State):
                 self.slashes.append(slash)
             elif block.id == 'gold':
                 self.gold += 1
+            elif block.id == 'dash':
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(self.entity.rect.center, 'player')
+                )
+                self.entity._real_pos += self.entity.vel * 20
 
         if self.mode == 'game':
             self.timer.update()
@@ -517,11 +532,18 @@ class Game(State):
         # block ---------------------------
 
         clicked_blocks = []
+        hovered_block = None
+
         for block in self.blocks:
             if block == self.selected_block:
                 block.update(self.handler.inputs, hovered=True)
             else:
                 block.update(self.handler.inputs)
+
+            if block.hovered:
+                hovered_block = block
+                self.unreset_hovered_block = block
+
 
             block.render(self.handler.canvas)
 
@@ -541,8 +563,39 @@ class Game(State):
             if self.selected_block in self.slots:
                 i = self.slots.index(self.selected_block)
                 self.slots[i] = None
-                    
 
+        if hovered_block and hovered_block.description:
+            self.block_hover_timer += 1
+            if self.block_hover_timer > 20:
+                self.block_hover_timer = 20
+        else:
+            self.block_hover_timer -= 1
+            if self.block_hover_timer < 0:
+                self.block_hover_timer = 0
+
+        self.alpha = self.block_hover_timer/20*255
+
+        print(f'{self.alpha=}')
+
+        if self.alpha != 0:
+
+            if self.unreset_hovered_block:
+                description = self.unreset_hovered_block.description
+                description = f'- {self.unreset_hovered_block.text} -\n' + description
+            else:
+                description=''
+            # description = self.unreset_hovered_block.description
+
+            if description:
+                s = pygame.Surface((200, 80))
+                s.fill((0, 0, 0, 100))
+                s.set_alpha(self.alpha*0.7)
+                p = Vector2(295, 15)
+                self.handler.canvas.blit(s, p)
+
+                text = FONTS['basic'].get_surf(description)
+                text.set_alpha(self.alpha)
+                self.handler.canvas.blit(text, p+(5, 5))
 
 
         if self.selected_block:
