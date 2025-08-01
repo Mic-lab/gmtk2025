@@ -1,6 +1,6 @@
 from copy import copy
 import math
-from random import uniform
+from random import random, uniform, choice
 import pygame
 from .state import State
 from ..mgl import shader_handler
@@ -14,6 +14,7 @@ from ..config import COLORS
 from ..animation import Animation
 from data.scripts import config
 from pygame import Vector2
+from time import time
 
 # WAVES = (
 #     ()
@@ -112,6 +113,34 @@ class Block(Button):
 
 class Game(State):
 
+    ENEMY_STATS={
+        'skeleton': {
+            'speed': 1,
+            'dmg': 15,
+            'hp': 10
+        },
+        'slime': {
+            'speed': 0.5,
+            'dmg': 5,
+            'hp': 20
+        },
+        'slime_3': {
+            'speed': 1,
+            'dmg': 8,
+            'hp': 8
+        },
+        'slime_2': {
+            'speed': 1.3,
+            'dmg': 5,
+            'hp': 5
+        },
+        'enemy': {
+            'speed': 1,
+            'dmg': 20,
+            'hp': 15,
+        },
+    }
+
     SHOP_SPEED = 10
 
     def __init__(self, *args, **kwargs):
@@ -138,15 +167,20 @@ class Game(State):
         self.e_speed = 1.5
 
         self.enemies = []
-        enemy = PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
-        enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 10, 10, 'enemy')
-        enemy.dmg = 10
-        self.enemies.append(enemy)
+        # enemy = PhysicsEntity(pos=(200, 200), name='enemy', action='run', max_vel=1)
+        # enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 10, 10, 'enemy')
+        # enemy.dmg = 10
+        # self.enemies.append(enemy)
+        #
+        # enemy = PhysicsEntity(pos=(200, 200), name='slime', action='run', max_vel=0.5)
+        # enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 20, 20, 'enemy')
+        # enemy.dmg = 10
+        # self.enemies.append(enemy)
 
         self.bars = {
-            'hp': Bar(pygame.Rect(10, 10, 100, 15), 50, 100, 'hp', 'HP'),
+            'hp': Bar(pygame.Rect(10, 10, 100, 15), 100, 100, 'hp', 'HP'),
         }
-        self.gold = 999
+        self.gold = 5
 
         self.projectiles=[]
         self.slashes = []
@@ -159,7 +193,7 @@ class Game(State):
         self.loop_block = Entity((10, y), 'loop_block')
 
         rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
-        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+120+i*20, 120, 16) for i in range(20)]
+        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+90+i*20, 120, 16) for i in range(20)]
 
         self.snap_positions = [(30, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
@@ -175,14 +209,16 @@ class Game(State):
             Block(3, 'gold', locked_rects[1], 'Get 1 gold', 'yellow', disabled=True),
             Block(3, 'hp', locked_rects[2], 'Get 1 HP', 'red', disabled=True),
             Block(3, 'projectile', locked_rects[3], 'Projectile', 'purple', disabled=True),
-            Block(15, 'dash', locked_rects[4], 'Dash', 'blue', disabled=True),
+            Block(3, 'projectile', locked_rects[4], 'Projectile', 'purple', disabled=True),
+            Block(15, 'dash', locked_rects[5], 'Dash', 'blue', disabled=True),
         ]
 
         self.prices = [15,
                        20,
                        20,
                        20,
-                       25]
+                       20,
+                       15]
 
         self.price_buttons = []
         for i, price in enumerate(self.prices):
@@ -268,6 +304,11 @@ class Game(State):
         self.shop_timer = None
         self.block_hover_timer = 0
 
+        self.t0 = time()
+        self.last_enemy = time()
+        self.enemy_interval = 3
+        self.time_passed = 0
+
     def sub_update(self):
 
         # bg ------------
@@ -346,7 +387,7 @@ class Game(State):
                 else:
                     coef = 1
                     flip = False
-                slash_pos = (slash_pos[0] + coef*12 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
+                slash_pos = (slash_pos[0] + coef*16 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
                 slash._real_pos = slash_pos
                 slash.animation.flip = (flip, False)
                 
@@ -406,16 +447,49 @@ class Game(State):
         self.shop.render(self.handler.canvas)
 
         # update enemy
+
+        self.t1 = time()
+        if self.mode == 'game':
+            self.time_passed += (self.t1 - self.t0)
+        
+            self.enemy_interval = 3 * (1 / (0.01*self.time_passed + 1))
+
+            if self.t1 - self.last_enemy >= self.enemy_interval:
+
+                choices = [ 'slime_2', 'slime_3' ]
+                if self.time_passed > 20:
+                    choices.append('slime')
+                if self.time_passed > 40:
+                    choices.append('skeleton')
+                if self.time_passed > 60:
+                    choices.append('enemy')
+
+                print(self.time_passed, choices)
+
+                enemy_name = choice(choices)
+
+                # enemy = PhysicsEntity(pos=(350, 150), name=enemy_name, action='run')
+                # enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), 20, 20, 'enemy')
+                # enemy.dmg = 10
+
+                stats = self.ENEMY_STATS[enemy_name]
+                enemy = PhysicsEntity(pos=(200, 200), name=enemy_name, action='run', max_vel=stats['speed'])
+                enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), stats['hp'], stats['hp'], 'enemy')
+                enemy.dmg = stats['dmg']
+
+
+
+
+                self.enemies.append(enemy)
+                self.last_enemy = self.t1
+
+        self.t0 = time()
+
         new_enemies = []
         for enemy in self.enemies:
-            if enemy.name == 'enemy':
-                enemy.vel = -enemy.pos + self.entity.pos
-                enemy.animation.flip[0] = enemy.vel[0] < 0
-
-                if self.shop_timer:
-                    ratio = self.shop_timer.ratio
-                else:
-                    ratio = 0
+            # if enemy.name == 'enemy':
+            enemy.vel = -enemy.pos + self.entity.pos
+            enemy.animation.flip[0] = enemy.vel[0] < 0
                 # enemy._real_pos = Vector2(300+100*ratio, 100)
 
             done = False
@@ -566,14 +640,14 @@ class Game(State):
 
         if hovered_block and hovered_block.description:
             self.block_hover_timer += 1
-            if self.block_hover_timer > 20:
-                self.block_hover_timer = 20
+            if self.block_hover_timer > 10:
+                self.block_hover_timer = 10
         else:
             self.block_hover_timer -= 1
             if self.block_hover_timer < 0:
                 self.block_hover_timer = 0
 
-        self.alpha = self.block_hover_timer/20*255
+        self.alpha = self.block_hover_timer/10*255
 
         print(f'{self.alpha=}')
 
@@ -584,6 +658,7 @@ class Game(State):
                 description = f'- {self.unreset_hovered_block.text} -\n' + description
             else:
                 description=''
+                description = f'- {self.unreset_hovered_block.text} -\n' + description
             # description = self.unreset_hovered_block.description
 
             if description:

@@ -116,7 +116,7 @@
   "size": { "w": 88, "h": 30 },
   "scale": "1",
   "slices": [
-   { "name": "rect", "color": "#0000ffff", "keys": [{ "frame": 0, "bounds": {"x": 26, "y": 17, "w": 11, "h": 15 } }] }
+   { "name": "Slice 1", "color": "#0000ffff", "keys": [{ "frame": 0, "bounds": {"x": 29, "y": 18, "w": 5, "h": 13 } }] }
   ]
  }
 }

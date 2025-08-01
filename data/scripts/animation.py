@@ -59,6 +59,10 @@ class Animation:
             if 'idle' in frames_data:
                 default_action = 'idle'
             else:
+                # print(f'{frames_data=} {config["meta"]["image"]=}')
+                # print(f'{config["meta"]["image"]=}')
+                # print(list(frames_data))
+                # print(list(frames_data)[0])
                 default_action = next(iter(frames_data))
             default_img = frames_data[default_action][0]['img']
             print(f'[Warning] No slice for {config["meta"]["image"]}; Generating rect with {default_action}')

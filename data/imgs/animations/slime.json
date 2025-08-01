@@ -1,0 +1,40 @@
+{ "frames": [
+   {
+    "filename": "hit",
+    "frame": { "x": 0, "y": 0, "w": 44, "h": 25 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 9, "y": 19, "w": 44, "h": 25 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 0, "y": 25, "w": 44, "h": 25 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 9, "y": 19, "w": 44, "h": 25 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 150
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 44, "y": 25, "w": 44, "h": 25 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 9, "y": 19, "w": 44, "h": 25 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 150
+   }
+ ],
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.x-dev",
+  "image": "slime.png",
+  "format": "RGBA8888",
+  "size": { "w": 88, "h": 50 },
+  "scale": "1",
+  "slices": [
+  ]
+ }
+}

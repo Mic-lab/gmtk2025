@@ -1,0 +1,62 @@
+{ "frames": [
+   {
+    "filename": "hit",
+    "frame": { "x": 0, "y": 0, "w": 12, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 20, "w": 12, "h": 20 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 0, "y": 20, "w": 12, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 20, "w": 12, "h": 20 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 12, "y": 20, "w": 12, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 20, "w": 12, "h": 20 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 24, "y": 20, "w": 12, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 20, "w": 12, "h": 20 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   },
+   {
+    "filename": "run",
+    "frame": { "x": 36, "y": 20, "w": 12, "h": 20 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 26, "y": 20, "w": 12, "h": 20 },
+    "sourceSize": { "w": 64, "h": 64 },
+    "duration": 100
+   }
+ ],
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.x-dev",
+  "image": "skeleton.png",
+  "format": "RGBA8888",
+  "size": { "w": 48, "h": 40 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "hit", "from": 0, "to": 0, "direction": "forward" },
+   { "name": "run", "from": 1, "to": 4, "direction": "forward" }
+  ],
+  "slices": [
+  ]
+ }
+}
