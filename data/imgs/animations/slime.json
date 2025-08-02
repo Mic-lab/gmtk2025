@@ -35,6 +35,7 @@
   "size": { "w": 88, "h": 50 },
   "scale": "1",
   "slices": [
+   { "name": "rect", "color": "#0000ffff", "keys": [{ "frame": 0, "bounds": {"x": 17, "y": 25, "w": 29, "h": 17 } }, { "frame": 1, "bounds": {"x": 17, "y": 25, "w": 29, "h": 17 } }] }
   ]
  }
 }

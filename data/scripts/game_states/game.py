@@ -126,8 +126,15 @@ class Block(Button):
 
 class Game(State):
 
+    FIRE_DURATION = 50*5
+
     ENEMY_STATS={
         'skeleton': {
+            'speed': 1,
+            'dmg': 15,
+            'hp': 10
+        },
+        'wizard': {
             'speed': 1,
             'dmg': 15,
             'hp': 10
@@ -176,6 +183,7 @@ class Game(State):
         self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
         self.entity.dashing = None
         self.entity.cooldown = None
+        self.entity.fire = None
         self.player = self.entity
 
         self.entity.invincible = None
@@ -195,7 +203,8 @@ class Game(State):
         self.bars = {
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 100, 100, 'hp', 'HP'),
         }
-        self.gold = 5
+        # self.gold = 5
+        self.gold = 999
 
         self.projectiles=[]
         self.slashes = []
@@ -367,6 +376,7 @@ class Game(State):
             if self.mode == 'game':
                 done = slash.update()
             if done:
+                # if slash.gen in self.particle_gens: self.particle_gens.remove(slash.gen)
                 continue
             else:
                 slash.render(self.handler.canvas)
@@ -391,10 +401,27 @@ class Game(State):
             self.timer = Timer(block.duration)
             if block.id == 'hp':
                 self.bars['hp'].change_val(1)
+            elif block.id == 'fire':
+                if not self.entity.fire:  # to prevent fire from reseting right after taking dmg, so u get hit a lot
+                    self.entity.fire = Timer(self.FIRE_DURATION)
+            elif block.id == 'water':
+                if self.entity.fire:
+                    self.entity.fire = None
+                    self.particle_gens.append(ParticleGenerator.from_template(self.entity.rect.center, 'water'))
+                    self.particle_gens.append(ParticleGenerator.from_template(self.entity.rect.center, 'smoke'))
             elif block.id == 'projectile':
                 vel= -pygame.Vector2(self.entity.rect.center)+self.handler.inputs['mouse pos']
                 vel.scale_to_length(6)
-                self.projectiles.append(Projectile(vel=vel, pos=self.entity.rect.center, name='projectile'))
+
+                projectile = Projectile(vel=vel, pos=self.entity.rect.center, name='projectile')
+
+                
+                if self.entity.fire:
+                    projectile.fire = Timer(self.FIRE_DURATION)
+                else:
+                    projectile.fire = None
+
+                self.projectiles.append(projectile)
             elif block.id == 'slash':
                 # slash_pos = Vector2(self.entity.rect.center) - self.handler.inputs['mouse pos']
                 # mouse_dist.scale_to_length(8)
@@ -424,8 +451,15 @@ class Game(State):
 
                 slash._real_pos = slash_pos
                 slash.animation.flip = (flip, False)
+
+                if self.entity.fire:
+                    slash.fire = Timer(self.FIRE_DURATION)
+                else:
+                    slash.fire = None
+                slash.gen = None
                 
                 self.slashes.append(slash)
+
             elif block.id == 'gold':
                 self.gold += 1
                 Bar.changes.append([FONTS['basic'].get_surf('+1', (0, 255, 0)), 255,  (10, 25) +  uniform(0, 15)*Vector2(1, 0.3) ])
@@ -448,7 +482,8 @@ class Game(State):
             if self.entity.invincible.done:
                 self.entity.invincible = None
             else:
-                self.entity.invincible.update()
+                if self.mode == 'game':
+                    self.entity.invincible.update()
 
 
 
@@ -488,6 +523,7 @@ class Game(State):
             self.time_passed += (self.t1 - self.t0)*1
         
             self.enemy_interval = 3 * (1 / (0.01*self.time_passed + 1))
+            # self.enemy_interval = 10 * (1 / (0.01*self.time_passed + 1))
 
             if self.t1 - self.last_enemy >= self.enemy_interval:
 
@@ -498,6 +534,10 @@ class Game(State):
                     choices.append('skeleton')
                 if self.time_passed > 60:
                     choices.append('enemy')
+                if self.time_passed > 80:
+                    choices.append('wizard')
+
+                choices = ['slime']
 
                 print(self.time_passed, choices)
 
@@ -509,6 +549,7 @@ class Game(State):
 
                 stats = self.ENEMY_STATS[enemy_name]
                 enemy = PhysicsEntity(pos=(200, 200), name=enemy_name, action='run', max_vel=stats['speed'])
+                enemy.fire = None
                 enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), stats['hp'], stats['hp'], 'enemy')
                 enemy.dmg = stats['dmg']
 
@@ -519,6 +560,48 @@ class Game(State):
                 self.last_enemy = self.t1
 
         self.t0 = time()
+
+        # fire
+        for entity in [self.entity] + self.enemies + self.slashes + self.projectiles:
+            if entity.fire:
+                if entity.fire.done:
+                    entity.fire = None
+                    continue
+                if entity.fire.frame % 50 == 0:
+
+                    if entity is self.entity:
+                        
+                        fire_before = False
+                        water = False  # cause water doesnt have enough time to take effect automatically
+                        for slot in self.slots:
+                            if slot:
+                                if slot.id == 'fire':
+                                    fire_before = True
+                                if slot.id == 'water':
+                                    water = fire_before
+                                    break
+                        if water:
+                            continue
+
+                    gen = ParticleGenerator.from_template(entity.rect.center, 'fire')
+
+                    gen.entity = entity
+                    self.particle_gens.append(
+                        gen
+                    )
+
+                    if entity is self.entity:
+                        self.bars['hp'].change_val(-2)
+                    elif entity in self.slashes + self.projectiles:
+                        pass
+
+                    # enemy
+                    else:
+                        entity.bar.change_val(-2)
+                if self.mode == 'game':
+                    entity.fire.update()
+                
+
 
 
         for enemy in self.enemies:
@@ -573,6 +656,14 @@ class Game(State):
                         enemy.bar.change_val(-5)
                     else:
                         enemy.bar.change_val(-10)
+                    if slash.fire:
+                        enemy.fire = Timer(self.FIRE_DURATION)
+
+                    gen = ParticleGenerator.from_template(enemy.rect.center, 'shock')
+                    gen.entity = enemy
+                    self.particle_gens.append(
+                        gen
+                                            )
 
             for projectile in self.projectiles:
                 if enemy not in projectile.enemies and enemy.rect.colliderect(projectile.rect):
@@ -580,13 +671,15 @@ class Game(State):
                     enemy.animation.set_action('hit')
                     enemy.bar.change_val(-4)
                     projectile.dead = True
+                    if projectile.fire:
+                        enemy.fire = Timer(self.FIRE_DURATION)
 
             if enemy.rect.colliderect(self.entity.rect) and not self.entity.invincible and not self.game_over:
                 self.entity.invincible = Timer(60)
                 self.bars['hp'].change_val(-enemy.dmg)
 
             enemy.render(self.handler.canvas)
-            enemy.bar.rect.midbottom = enemy.rect.midtop
+            enemy.bar.rect.midbottom = enemy.rect.midtop + Vector2(0, -6)
             enemy.bar.render(self.handler.canvas)
             
             if enemy.bar.value > 0:
@@ -599,7 +692,7 @@ class Game(State):
                     ParticleGenerator.from_template(enemy.rect.center, 'smoke')
                 )
                 self.particle_gens.append(
-                    ParticleGenerator.from_template(enemy.rect.center, 'shock')
+                    ParticleGenerator.from_template(enemy.rect.center, 'death')
                 )
                 # particle stuff here TODO
 
@@ -688,6 +781,9 @@ class Game(State):
 
         self.particle_gens = ParticleGenerator.update_generators(self.particle_gens)
         for particle_gen in self.particle_gens:
+            if particle_gen.base_particle.animation.action in ('group', 'loop'):
+                # print(f'{particle_gen.base_particle.animation.action=}')
+                particle_gen.pos = particle_gen.entity.rect.center
             particle_gen.render(self.handler.canvas)
 
         new_changes = []
@@ -803,7 +899,7 @@ class Game(State):
 
 
                 ]
-        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (150, 200))
+        # self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (150, 200))
 
 
         self.loop_block.update()

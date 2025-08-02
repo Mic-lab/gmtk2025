@@ -65,6 +65,11 @@ class ParticleGenerator:
             'vel_randomness': 0.5,
             'rate': 10
         },
+        'water': {
+            'base_particle': Particle(action='basic', vel=(0, 0), color=config.COLORS['blue']),
+            'vel_randomness': 0.5,
+            'rate': 10
+        },
         'big': {
             'base_particle': Particle(action='big', vel=(0, -0.5)),
             'vel_randomness': 0.3,
@@ -72,6 +77,11 @@ class ParticleGenerator:
         },
         'shock': {
             'base_particle': Particle(action='loop', vel=(0, 0), color=config.COLORS['black']),
+            'vel_randomness': 0,
+            'rate': 1
+        },
+        'death': {
+            'base_particle': Particle(action='arrow', vel=(0, 0), color=config.COLORS['black']),
             'vel_randomness': 0,
             'rate': 1
         },
@@ -87,12 +97,12 @@ class ParticleGenerator:
             'inverse_rate': True,
             'duration': None,
         },
-        'color test': {
-            'base_particle': Particle(action='group', vel=(0, -2), color=(255, 0, 68)),
-            'vel_randomness': 0.5,
-            'rate': 8,
+        'fire': {
+            'base_particle': Particle(action='group', vel=(0, -1)),
+            'vel_randomness': 0.2,
+            'rate': 5,
             'inverse_rate': True,
-            'duration': None,
+            'duration': 25,
         },
     }
 
