@@ -140,7 +140,7 @@ class Button:
         self.surf.blit(text_img, (rect.centerx - text_img.get_width()*0.5,
                              rect.centery - text_img.get_height()*0.5 - 1))
         
-    def update(self, inputs, select_sound='select.wav', click_sound='click.wav', hovered=None):
+    def update(self, inputs, select_sound='select.wav', click_sound='rollover2.ogg', hovered=None):
         old_state = self.state
 
         self.clicked = False
@@ -151,7 +151,7 @@ class Button:
             self.hovered = True
             if inputs['pressed'].get('mouse1'):
                 self.clicked = True
-                # sfx.sounds[click_sound].play()
+                sfx.sounds[click_sound].play()
         else:
             self.hovered = False
 

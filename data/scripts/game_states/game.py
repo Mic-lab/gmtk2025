@@ -132,27 +132,27 @@ class Game(State):
         'skeleton': {
             'speed': 1,
             'dmg': 15,
-            'hp': 10
+            'hp': 15
         },
         'wizard': {
             'speed': 1,
             'dmg': 15,
-            'hp': 10
+            'hp': 15
         },
         'slime': {
             'speed': 0.5,
             'dmg': 5,
-            'hp': 20
+            'hp': 25
         },
         'slime_3': {
             'speed': 1,
             'dmg': 8,
-            'hp': 8
+            'hp': 10
         },
         'slime_2': {
             'speed': 1.3,
             'dmg': 5,
-            'hp': 5
+            'hp': 10
         },
         'enemy': {
             'speed': 1,
@@ -164,7 +164,26 @@ class Game(State):
     SHOP_SPEED = 10
 
     def __init__(self, *args, **kwargs):
+        pygame.mixer.music.set_volume(0.8)
+        sfx.play_music('song.wav', -1)
+
         super().__init__(*args, **kwargs)
+
+        self.tutorial = pygame.Surface(config.CANVAS_SIZE)
+        self.tutorial.set_colorkey((0, 0, 0))
+        tut_txt = FONTS['basic'].get_surf('''Welcome to the block shop.
+In here the game is paused.
+Use WASD to move (to leave the shop) and space to dash.
+But before leaving, make sure to setup your blocks
+by dragging them in the forever loop.''')
+        self.tutorial.blit(tut_txt, (180, 20))
+        self.tutorial.blit(Animation.img_db['arrow_'], (160, 105))
+
+
+
+
+        self.first_shop = True
+
 
         self.game_over = False
 
@@ -180,7 +199,7 @@ class Game(State):
         y = 70
         # rects = [pygame.Rect(120, y+i*20, 120, 16) for i in range(20)]
 
-        self.entity = PhysicsEntity(pos=(200, 50), name='side', action='idle', max_vel=1.5)
+        self.entity = PhysicsEntity(pos=(350, 30), name='side', action='idle', max_vel=1.5)
         self.entity.dashing = None
         self.entity.cooldown = None
         self.entity.fire = None
@@ -286,6 +305,10 @@ class Game(State):
                 block.description = 'Teleports towards direction of\nplayer movement.\nDifficult to use.'
             elif block.id == 'projectile':
                 block.description = 'Shoots an arrow at mouse position.'
+            elif block.id == 'fire':
+                block.description = 'Light yourself up on fire!\nDealing damage fire damage at the cost\nof taking fire damage.'
+            elif block.id == 'water':
+                block.description = 'Extinguish fire.'
             else:
                 block.description = ''
 
@@ -462,6 +485,7 @@ class Game(State):
                 self.slashes.append(slash)
 
             elif block.id == 'gold':
+                # sfx.sounds['money.wav'].play()
                 self.gold += 1
                 Bar.changes.append([FONTS['basic'].get_surf('+1', (0, 255, 0)), 255,  (10, 25) +  uniform(0, 15)*Vector2(1, 0.3) ])
             elif block.id == 'dash':
@@ -509,7 +533,7 @@ class Game(State):
         for key, bar in self.bars.items():
             bar.render(self.handler.canvas)
 
-        self.handler.canvas.blit(FONTS['basic'].get_surf(f'{self.gold}'), (10, 30))
+        self.handler.canvas.blit(FONTS['basic'].get_surf(f'{self.gold} $'), (10, 30))
 
         # shop
         # pygame.draw.polygon(self.handler.canvas, COLORS['black'], self.shop_entrance)
@@ -675,7 +699,7 @@ class Game(State):
                     projectile.enemies.append(enemy)
                     # enemy.animation.set_action('hit')
                     # enemy.bar.change_val(-4)
-                    enemy.take_dmg(4)
+                    enemy.take_dmg(5)
                     projectile.dead = True
                     if projectile.fire:
                         enemy.fire = Timer(self.FIRE_DURATION)
@@ -683,6 +707,7 @@ class Game(State):
             if enemy.rect.colliderect(self.entity.rect) and not self.entity.invincible and not self.game_over:
                 self.entity.invincible = Timer(60)
                 self.bars['hp'].change_val(-enemy.dmg)
+                sfx.sounds['hurt.wav'].play()
 
             enemy.render(self.handler.canvas)
             enemy.bar.rect.midbottom = enemy.rect.midtop + Vector2(0, -6)
@@ -702,6 +727,7 @@ class Game(State):
                     ParticleGenerator.from_template(enemy.rect.center, 'death')
                 )
                 # particle stuff here TODO
+                sfx.sounds['kill.wav'].play()
 
         self.enemies = new_enemies
 
@@ -739,6 +765,7 @@ class Game(State):
                 self.entity.animation.set_action('idle')
 
             if self.handler.inputs['pressed'].get('space') and not self.entity.cooldown:
+                sfx.sounds['dash.wav'].play()
                 self.entity.cooldown = Timer(20)
                 self.entity.dashing = Timer(10)
                 self.entity.max_vel = 5
@@ -763,6 +790,8 @@ class Game(State):
         if self.entity.rect.colliderect(self.shop.rect):
             # self.entity._real_pos = Vector2(340, 80)
             if self.mode == 'game':
+                pygame.mixer.music.set_volume(0.3)
+                sfx.sounds['enter.wav'].play()
                 self.particle_gens.append(ParticleGenerator.from_template(self.entity.rect.center, 'shards'))
                 if self.shop_timer:
                     offset = self.SHOP_SPEED - self.shop_timer.frame
@@ -773,7 +802,11 @@ class Game(State):
             self.mode = 'shop'
         else:
             if self.mode == 'shop':
+                pygame.mixer.music.set_volume(0.8)
+                sfx.sounds['exit.wav'].play()
+                self.first_shop = False
                 if self.shop_timer:
+                    
                     offset = self.SHOP_SPEED - self.shop_timer.frame
                     self.shop_timer = Timer(self.SHOP_SPEED)
                     self.shop_timer.frame = offset
@@ -991,6 +1024,7 @@ class Game(State):
         if clicked_button:
             # TODO: more feedback for purchase
 
+
             self.gold -= clicked_button[0].price
 
             i = clicked_button[1]
@@ -1001,3 +1035,7 @@ class Game(State):
             clicked_button[0].disabled = True
             clicked_button[0].text = 'Sold!'
 
+        if self.first_shop:
+            self.handler.canvas.blit(self.tutorial, (0, 0))
+            print('test')
+            # self.tutorial

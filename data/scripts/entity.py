@@ -125,7 +125,7 @@ class PhysicsEntity(Entity):
 
     def take_dmg(self, dmg, sound='generic'):
         if sound == 'generic':
-            sfx.sounds[f'hit{randint(1, 4)}.wav'].play()
+            sfx.sounds[f'hit__{randint(1, 3)}.wav'].play()
 
         self.bar.change_val(-dmg)
         self.animation.set_action('hit')

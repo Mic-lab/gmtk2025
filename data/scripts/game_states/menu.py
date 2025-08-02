@@ -5,6 +5,7 @@ from ..button import Button
 from ..font import FONTS
 from ..import animation
 from .. import sfx
+from ..animation import Animation
 import pygame
 
 class Menu(State):
@@ -14,13 +15,14 @@ class Menu(State):
 
         rects = [pygame.Rect(30, 30+i*30, 80, 20) for i in range(4)]
         self.buttons = {
-            'game': Button(rects[0], 'harloo', 'basic'),
+            'game': Button(rects[0], 'Play', 'basic'),
         }
 
     def sub_update(self):
-        self.handler.canvas.fill((20, 20, 20))
+        # self.handler.canvas.fill((20, 20, 20))
+        self.handler.canvas.blit(Animation.img_db['menu'], (0, 0))
 
-        self.handler.canvas.set_at(self.handler.inputs['mouse pos'], (255, 0, 0))
+        # self.handler.canvas.set_at(self.handler.inputs['mouse pos'], (255, 0, 0))
 
         # Update Buttons
         for key, btn in self.buttons.items():
