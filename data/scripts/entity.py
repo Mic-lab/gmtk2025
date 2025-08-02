@@ -1,6 +1,9 @@
+from random import random, randint
 import pygame
 from math import atan, pi
 from pygame import Vector2
+
+from data.scripts import sfx
 from .animation import Animation
     
 class Entity:
@@ -36,7 +39,7 @@ class Entity:
         return self.animation.update()
 
     def render(self, surf):
-        pygame.draw.rect(surf, (255, 0, 0), self.rect)
+        # pygame.draw.rect(surf, (255, 0, 0), self.rect)
         surf.blit(self.img, self.pos)
 
     def __repr__(self):
@@ -120,4 +123,10 @@ class PhysicsEntity(Entity):
                 if direction: self.collision_directions[direction] = True
                 return
 
+    def take_dmg(self, dmg, sound='generic'):
+        if sound == 'generic':
+            sfx.sounds[f'hit{randint(1, 4)}.wav'].play()
+
+        self.bar.change_val(-dmg)
+        self.animation.set_action('hit')
 

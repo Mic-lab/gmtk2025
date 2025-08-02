@@ -1,6 +1,6 @@
 from copy import copy
 import math
-from random import random, uniform, choice
+from random import random, uniform, choice, randint
 import pygame
 from .state import State
 from ..mgl import shader_handler
@@ -204,7 +204,8 @@ class Game(State):
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 100, 100, 'hp', 'HP'),
         }
         # self.gold = 5
-        self.gold = 999
+        # self.gold = 999
+        self.gold = 0
 
         self.projectiles=[]
         self.slashes = []
@@ -537,9 +538,9 @@ class Game(State):
                 if self.time_passed > 80:
                     choices.append('wizard')
 
-                choices = ['slime']
+                # choices = ['slime']
 
-                print(self.time_passed, choices)
+                # print(self.time_passed, choices)
 
                 enemy_name = choice(choices)
 
@@ -597,7 +598,8 @@ class Game(State):
 
                     # enemy
                     else:
-                        entity.bar.change_val(-2)
+                        entity.take_dmg(2, sound='fire')
+                        # entity.bar.change_val(-2)
                 if self.mode == 'game':
                     entity.fire.update()
                 
@@ -651,11 +653,14 @@ class Game(State):
             for slash in self.slashes:
                 if enemy not in slash.enemies and enemy.rect.colliderect(slash.rect):
                     slash.enemies.append(enemy)
-                    enemy.animation.set_action('hit')
+                    # enemy.animation.set_action('hit')
                     if slash.name == 'slash':
-                        enemy.bar.change_val(-5)
+                        enemy.take_dmg(5)
+                        # enemy.bar.change_val(-5)
                     else:
-                        enemy.bar.change_val(-10)
+                        enemy.take_dmg(10)
+                        # enemy.bar.change_val(-10)
+
                     if slash.fire:
                         enemy.fire = Timer(self.FIRE_DURATION)
 
@@ -668,8 +673,9 @@ class Game(State):
             for projectile in self.projectiles:
                 if enemy not in projectile.enemies and enemy.rect.colliderect(projectile.rect):
                     projectile.enemies.append(enemy)
-                    enemy.animation.set_action('hit')
-                    enemy.bar.change_val(-4)
+                    # enemy.animation.set_action('hit')
+                    # enemy.bar.change_val(-4)
+                    enemy.take_dmg(4)
                     projectile.dead = True
                     if projectile.fire:
                         enemy.fire = Timer(self.FIRE_DURATION)
@@ -680,14 +686,15 @@ class Game(State):
 
             enemy.render(self.handler.canvas)
             enemy.bar.rect.midbottom = enemy.rect.midtop + Vector2(0, -6)
+            # print(f'{particle_gen.base_particle.animation.action=}')
             enemy.bar.render(self.handler.canvas)
             
             if enemy.bar.value > 0:
                 new_enemies.append(enemy)
             else:
-                self.particle_gens.append(
-                    ParticleGenerator.from_template(enemy.rect.center, 'big')
-                )
+                # self.particle_gens.append(
+                #     ParticleGenerator.from_template(enemy.rect.center, 'big')
+                # )
                 self.particle_gens.append(
                     ParticleGenerator.from_template(enemy.rect.center, 'smoke')
                 )
@@ -837,6 +844,7 @@ class Game(State):
             if self.selected_block in self.slots:
                 i = self.slots.index(self.selected_block)
                 self.slots[i] = None
+                sfx.sounds['switch27.ogg'].play()
 
         if hovered_block and hovered_block.description:
             self.block_hover_timer += 1
@@ -882,6 +890,7 @@ class Game(State):
                     self.slots[i] = self.selected_block
                     self.selected_block.rect.topleft = pos
                     self.selected_block = None
+                    sfx.sounds['switch18.ogg'].play()
                     break
         # -----------------------------------
 
@@ -991,3 +1000,4 @@ class Game(State):
 
             clicked_button[0].disabled = True
             clicked_button[0].text = 'Sold!'
+

@@ -128,7 +128,8 @@ class Button:
             h -= 2
             pygame.draw.rect(self.surf, self.colors['fill'], (x, y, w, h), border_radius=1)
             # pygame.draw.aaline(self.surf, self.colors['text'], (x, y), (x, y + h - 2))
-            # pygame.draw.aaline(self.surf, self.colors['text'], (x, y), (x + w - 1, y))
+            pygame.draw.aaline(self.surf, self.colors['text'], (x, y), (x + w - 1, y))
+            pygame.draw.aaline(self.surf, self.colors['border'], (x, h), (x + w - 1, h))
             
             if not self.locked:
                 for i in range(3):

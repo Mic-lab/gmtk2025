@@ -18,6 +18,9 @@ def load_sounds():
     for file in os.listdir(SOUNDS_DIR):
         full_file = os.path.join(SOUNDS_DIR, file)
         sound = pygame.mixer.Sound(full_file)
+        if 'switch27' in file:
+            sound.set_volume(0.5)
+
         print(sound)
         sounds[file] = sound
     return sounds
