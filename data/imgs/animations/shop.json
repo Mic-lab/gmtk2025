@@ -1,0 +1,58 @@
+{ "frames": [
+   {
+    "filename": "idle",
+    "frame": { "x": 0, "y": 0, "w": 68, "h": 62 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 2, "y": 0, "w": 68, "h": 62 },
+    "sourceSize": { "w": 70, "h": 65 },
+    "duration": 2000
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 68, "y": 0, "w": 68, "h": 62 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 2, "y": 0, "w": 68, "h": 62 },
+    "sourceSize": { "w": 70, "h": 65 },
+    "duration": 50
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 136, "y": 0, "w": 68, "h": 62 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 2, "y": 0, "w": 68, "h": 62 },
+    "sourceSize": { "w": 70, "h": 65 },
+    "duration": 50
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 204, "y": 0, "w": 68, "h": 62 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 2, "y": 0, "w": 68, "h": 62 },
+    "sourceSize": { "w": 70, "h": 65 },
+    "duration": 50
+   },
+   {
+    "filename": "idle",
+    "frame": { "x": 272, "y": 0, "w": 68, "h": 62 },
+    "rotated": false,
+    "trimmed": true,
+    "spriteSourceSize": { "x": 2, "y": 0, "w": 68, "h": 62 },
+    "sourceSize": { "w": 70, "h": 65 },
+    "duration": 50
+   }
+ ],
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.x-dev",
+  "image": "shop.png",
+  "format": "RGBA8888",
+  "size": { "w": 340, "h": 62 },
+  "scale": "1",
+  "slices": [
+  ]
+ }
+}

@@ -46,7 +46,7 @@ class Button:
     }
     
     def __init__(self, rect: pygame.Rect, text, preset, disabled=False):
-        self.rect = rect
+        self.rect = pygame.FRect(rect)
         self.text = text
         self.preset = preset
         self.hovered = False

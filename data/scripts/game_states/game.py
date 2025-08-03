@@ -116,6 +116,7 @@ class Block(Button):
         args=list(args)
         args[1] += f' <{round(self.duration/60, 2)}>'
         super().__init__(*args, **kwargs)
+        self.vel = Vector2(0,0)
 
     @property
     def state(self):
@@ -169,14 +170,18 @@ class Game(State):
 
         super().__init__(*args, **kwargs)
 
-        self.tutorial = pygame.Surface(config.CANVAS_SIZE)
-        self.tutorial.set_colorkey((0, 0, 0))
+        self.tutorial = pygame.Surface(config.CANVAS_SIZE, pygame.SRCALPHA)
+        # self.tutorial.set_colorkey((0, 0, 0))
+        
+
         tut_txt = FONTS['basic'].get_surf('''Welcome to the block shop.
 In here the game is paused.
-Use WASD to move (to leave the shop) and space to dash.
+Use WASD to move (to leave the shop) and SPACE to dash.
 But before leaving, make sure to setup your blocks
 by dragging them in the forever loop.''')
-        self.tutorial.blit(tut_txt, (180, 20))
+        p = (180, 20)
+        pygame.draw.rect(self.tutorial, (0, 0, 0, 50), (*p, *tut_txt.get_size()))
+        self.tutorial.blit(tut_txt, p)
         self.tutorial.blit(Animation.img_db['arrow_'], (160, 105))
 
 
@@ -240,7 +245,7 @@ by dragging them in the forever loop.''')
         rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
         locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+70+i*18, 120, 16) for i in range(20)]
 
-        self.snap_positions = [(30, y+19+i*15) for i in range(5)]
+        self.snap_positions = [(31, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
         self.blocks = [
             Block(3, 'hp', rects[0], 'Get 1 HP', 'red', disabled=True),
@@ -256,7 +261,6 @@ by dragging them in the forever loop.''')
             Block(3, 'slash', locked_rects[3], 'Slash', 'purple', disabled=True),
             Block(3, 'projectile', locked_rects[4], 'Projectile', 'purple', disabled=True),
             Block(3, 'projectile', locked_rects[5], 'Projectile', 'purple', disabled=True),
-            Block(3, 'pit', locked_rects[5], 'Stab pit', 'purple', disabled=True),
             Block(3, 'fire', locked_rects[6], 'Ignite', 'orange', disabled=True),
             Block(15, 'water', locked_rects[7], 'Water', 'blue', disabled=True),
         ]
@@ -266,7 +270,6 @@ by dragging them in the forever loop.''')
                        20,
                        20,
                        20,
-                       30,
                        20,
                        30,]
 
@@ -325,7 +328,7 @@ by dragging them in the forever loop.''')
 
         self.selected_block = None
 
-        self.shop = Entity((333, 0), 'shop')
+        self.shop = Entity((333, 0), 'shop', action='idle')
 
         # self.shop_entrance = (
         #     (280, 0),
@@ -578,6 +581,7 @@ by dragging them in the forever loop.''')
         # pygame.draw.polygon(self.handler.canvas, COLORS['black'], self.shop_entrance)
         pygame.draw.polygon(self.handler.canvas, COLORS['blue'], [(p[0], p[1]) for p in self.random_points ])
         pygame.draw.polygon(self.handler.canvas, COLORS['black'], [(p[0], p[1]) for p in self.random_points ], width=3)
+        self.shop.update()
         self.shop.render(self.handler.canvas)
 
         # update enemy
@@ -887,12 +891,24 @@ by dragging them in the forever loop.''')
         self.render_shop()
 
 
+        # loop block --------------
+        self.loop_block.update()
+        self.loop_block.render(self.handler.canvas)
+
+        self.handler.canvas.blit(self.arrow, (14, self.snap_positions[self.block_i][1]+6))
+
+
         # block ---------------------------
 
         clicked_blocks = []
         hovered_block = None
 
         for block in self.blocks:
+            print(f'{block.vel=} {type(block.vel)}')
+            block.rect.topleft += block.vel
+            # block.vel *= 0.88
+            block.vel *= 0.84
+
             if block == self.selected_block:
                 block.update(self.handler.inputs, hovered=True)
             else:
@@ -918,6 +934,7 @@ by dragging them in the forever loop.''')
         if clicked_blocks:
             block = clicked_blocks[-1]
             self.selected_block = block
+            block.vel = pygame.Vector2(0, 0)
             if self.selected_block in self.slots:
                 i = self.slots.index(self.selected_block)
                 self.slots[i] = None
@@ -988,12 +1005,6 @@ by dragging them in the forever loop.''')
         # self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (150, 200))
 
 
-        self.loop_block.update()
-        self.loop_block.render(self.handler.canvas)
-
-        self.handler.canvas.blit(self.arrow, (14, self.snap_positions[self.block_i][1]+6))
-
-
 
 
 
@@ -1008,7 +1019,7 @@ by dragging them in the forever loop.''')
             shader_handler.vars['shakeTimer'] = -1 
         else:
 
-            shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' else -1
+            shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' and not self.first_shop else -1
             shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio
 
         self.first_loop = False
@@ -1072,6 +1083,7 @@ by dragging them in the forever loop.''')
             self.gold -= clicked_button[0].price
 
             i = clicked_button[1]
+            self.locked_blocks[i].vel = Vector2(-28, 0)
             self.locked_blocks[i].locked = False
             self.locked_blocks[i].generate_surf()
             self.locked_blocks[i] = None
@@ -1081,5 +1093,4 @@ by dragging them in the forever loop.''')
 
         if self.first_shop:
             self.handler.canvas.blit(self.tutorial, (0, 0))
-            print('test')
             # self.tutorial
