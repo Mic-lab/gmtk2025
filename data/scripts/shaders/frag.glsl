@@ -3,6 +3,7 @@
 uniform sampler2D canvasTex;
 uniform float transitionTimer;
 uniform int transitionState;
+uniform float killTimer = -1.0;
 uniform float shakeTimer = -1.0;
 uniform float caTimer = -1.0;
 
@@ -55,6 +56,12 @@ void main() {
 
         f_color.gb *= 0.9;
         f_color.r *= 0.8;
+    }
+
+    if (killTimer >= 0) {
+        // f_color = mix(f_color, vec4(0.9, 0.5, 1, 0), killTimer*2);
+        // f_color = mix(f_color, vec4(0.9, 0.5, 1, 0), centerDist*0.5*(killTimer));
+        f_color = mix(f_color, vec4(0.9, 0.9, 1, 0), 0.5*(killTimer));
     }
 
     /*

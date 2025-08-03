@@ -101,6 +101,7 @@ class Animation:
                     cls.img_db[animation_name] = img                # For ease of access outside of the class
                 else:
                     spritesheet = utils.load_img(os.path.join(directory, file_name))
+                    print(f'{file=}')
                     spritesheet_data = cls.load_spritesheet(animation_config, spritesheet)
                     cls.animation_db[animation_name] = spritesheet_data
             else:

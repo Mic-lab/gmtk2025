@@ -8,7 +8,7 @@ from .config import SCREEN_SIZE
 pygame.init()
 
 # screen = pygame.display.set_mode(SCREEN_SIZE,  pygame.OPENGL | pygame.DOUBLEBUF | pygame.SCALED)
-caption = 'Loop'
+caption = 'Bloq Loop'
 
 screen = pygame.display.set_mode(SCREEN_SIZE,  pygame.OPENGL | pygame.DOUBLEBUF)
 pygame.display.set_caption(caption)

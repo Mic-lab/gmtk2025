@@ -12,6 +12,7 @@ class Entity:
         self.name = name
         self.animation = Animation(name, action)
         self.flip = [False, False]
+        self.blit_angle = None
 
     @property
     def pos(self):
@@ -29,18 +30,33 @@ class Entity:
 
     @property
     def rect(self) -> pygame.Rect:
-        return pygame.Rect(*(self.animation.rect.topleft + self.pos), *self.animation.rect.size)
+        if self.blit_angle is not None:
+            # rect = self.img.get_bounding_rect()
+            rect = pygame.Rect(0, 0, *self.img.get_size())
+            rect = rect.inflate(10, 10)  # only used for blade
+            rect.topleft += self.pos
+        else:
+            rect = pygame.Rect(*(self.animation.rect.topleft + self.pos), *self.animation.rect.size)
+        return rect
 
     @property
     def img(self) -> pygame.Surface:
-        return self.animation.img
+        img = self.animation.img
+        if self.blit_angle is not None:
+            img = pygame.transform.rotate(img, self.blit_angle)
+
+        return img
 
     def update(self):
         return self.animation.update()
 
     def render(self, surf):
         # pygame.draw.rect(surf, (255, 0, 0), self.rect)
+
+
         surf.blit(self.img, self.pos)
+        # surf.set_at(self.rect.topleft, (0, 255, 255))
+        # surf.set_at(self.rect.center, (255, 255, 255))
 
     def __repr__(self):
         return f'<{self.name}>'

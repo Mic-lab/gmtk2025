@@ -102,7 +102,7 @@ class Button:
     def generate_surf(self):
         self.surf = pygame.Surface(self.rect.size)
         self.surf.set_colorkey((0, 0, 0))
-        print(f'{self.rect=}')
+        # print(f'{self.rect=}')
         rect = pygame.Rect(0, 0, *self.rect.size)
 
         if self.preset in {'basic',}:

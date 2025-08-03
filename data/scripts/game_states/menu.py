@@ -50,6 +50,11 @@ class Menu(State):
         self.handler.canvas.blit(Animation.img_db['menu'], (0, 0))
 
         # self.handler.canvas.set_at(self.handler.inputs['mouse pos'], (255, 0, 0))
+        if self.handler.time_alive:
+            self.handler.canvas.blit(
+                FONTS['basic'].get_surf(f'Time alive: {round(self.handler.time_alive)} seconds.'),
+                (135, 110)
+            )
 
         # Update Buttons
         for key, btn in self.buttons.items():
@@ -79,5 +84,5 @@ class Menu(State):
         text = [f'{round(self.handler.clock.get_fps())} fps',
                 # pprint.pformat(Particle.cache)
                 ]
-        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (0, 0))
+        self.handler.canvas.blit(FONTS['basic'].get_surf('\n'.join(text)), (5, 0))
 

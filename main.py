@@ -6,6 +6,8 @@ from data.scripts.mgl import shader_handler
 from data.scripts import game_states
 from data.scripts.transition import Transition, TransitionState
 
+pygame.mixer.set_num_channels(16)
+
 class GameHandler:
 
     def __init__(self):
@@ -16,6 +18,7 @@ class GameHandler:
         self.set_state(self.states.Menu)
         # self.set_state(self.states.Game)
         self.transition = Transition()
+        self.time_alive = None
 
     def set_state(self, state):
         self.state = state(self)

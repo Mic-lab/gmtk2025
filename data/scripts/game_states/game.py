@@ -177,12 +177,15 @@ class Game(State):
         tut_txt = FONTS['basic'].get_surf('''Welcome to the block shop.
 In here the game is paused.
 Use WASD to move (to leave the shop) and SPACE to dash.
+    You are invincible when dashing
 But before leaving, make sure to setup your blocks
 by dragging them in the forever loop.''')
         p = (180, 20)
         pygame.draw.rect(self.tutorial, (0, 0, 0, 50), (*p, *tut_txt.get_size()))
         self.tutorial.blit(tut_txt, p)
         self.tutorial.blit(Animation.img_db['arrow_'], (160, 105))
+
+        self.kill_timer = 0
 
 
 
@@ -228,7 +231,8 @@ by dragging them in the forever loop.''')
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 100, 100, 'hp', 'HP'),
         }
         # self.gold = 5
-        self.gold = 999
+        # self.gold = 999
+        self.gold = 0
         # self.gold = 0
 
         self.projectiles=[]
@@ -236,6 +240,7 @@ by dragging them in the forever loop.''')
         self.pits = []
         
         self.loop_duration = 60
+        # self.loop_duration = 30
         self.particle_gens = []
         # self.particle_gens = [ParticleGenerator.from_template((200, 200), 'angle test'),
         #                       ParticleGenerator.from_template((300, 200), 'color test')]
@@ -266,6 +271,7 @@ by dragging them in the forever loop.''')
         ]
 
         self.prices = [10,
+                       20,
                        20,
                        20,
                        20,
@@ -307,7 +313,7 @@ by dragging them in the forever loop.''')
 
         for block in self.blocks:
             if block.id == 'slash':
-                block.description = 'Horizontal melee attack at the\ndirection of your mouse\nWhen combined with a dash,\ndamage is doubled.'
+                block.description = 'Melee attack at the direction of\nyour mouse. When combined with a \ndash, it creates a super slash that\nfollows the dash with 2x damage.'
             elif block.id == 'dash':
                 block.description = 'Teleports towards direction of\nplayer movement.\nDifficult to use.'
             elif block.id == 'projectile':
@@ -315,7 +321,7 @@ by dragging them in the forever loop.''')
             elif block.id == 'pit':
                 block.description = 'Creates a pit on cursor that deals\ndamage proportionate to the\nnumber of enemies inside.'
             elif block.id == 'fire':
-                block.description = 'Light yourself up on fire!\nYou\'ll deal fire damage at\nthe cost of taking fire damage.'
+                block.description = 'Light yourself up on fire!\nProjectiles and slashes deal fire\ndamage. But you will also take\nfire damage...'
             elif block.id == 'water':
                 block.description = 'Extinguish fire.'
             else:
@@ -489,34 +495,89 @@ by dragging them in the forever loop.''')
 
                 self.pits.append(pit)
             elif block.id == 'slash':
-                # slash_pos = Vector2(self.entity.rect.center) - self.handler.inputs['mouse pos']
-                # mouse_dist.scale_to_length(8)
-                slash_pos = self.entity.rect.center
+
+
+                # pygame.draw.aacircle(self.handler.canvas, (255, 0, 0), self.entity.rect.center, 8)
+
+                slash_pos = -Vector2(self.entity.rect.center) + self.handler.inputs['mouse pos']
+                # if self.handler.inputs['held'].get('z'):
+                #     l = 0
+                # else:
+                l = 16
+                slash_pos.scale_to_length(l)
+                print(f'slash_pos: {slash_pos} {slash_pos.length()}')
+                slash_pos += self.entity.rect.center
+
+
+                slash = PhysicsEntity(vel=Vector2(0,0), pos=(0,0), name='slash', action='idle')
+                
+                vel = self.entity.vel.copy()
+                if vel.length() > 3:
+                    slash = PhysicsEntity(vel=vel, pos=(0,0), name='super_slash', action='idle')
+                else:
+                    slash = PhysicsEntity(vel=vel, pos=(0,0), name='slash', action='idle')
+
+
+                slash.enemies = []
+
+                slash.fire = None
+                slash.gen = None
+
+                if self.entity.fire:
+                    slash.fire = Timer(self.FIRE_DURATION)
+                else:
+                    slash.fire = None
+
+                delta = slash_pos - self.entity.rect.center
+                try:
+                    angle = math.atan(-delta.y / delta.x) / math.pi * 180
+                except ZeroDivisionError:
+                    angle = 0
+
+                if delta.x < 0: angle -= 180
+                slash.blit_angle = angle 
+                # angle = Vector2(self.entity.rect.center).angle_to()
+
+
+
+                # rect = slash.img.get_bounding_rect()
+                rect = pygame.Rect(0, 0, *slash.img.get_size())
+                slash_pos -= rect.center
+                slash._real_pos = slash_pos
+
+
+                self.slashes.append(slash)
+
+                '''
+
+
+                # slash_pos = self.entity.rect.center
 
 
                 vel = self.entity.vel.copy()
                 if vel.length() > 3:
                     slash = PhysicsEntity(vel=vel, pos=(0,0), name='super_slash', action='idle')
-                    if vel.x < 0:
-                        coef = -1
-                        flip = True
-                    else:
-                        coef = 1
-                        flip = False
+                #     if vel.x < 0:
+                #         coef = -1
+                #         flip = True
+                #     else:
+                #         coef = 1
+                #         flip = False
                 else:
                     slash = PhysicsEntity(vel=vel, pos=(0,0), name='slash', action='idle')
-                    if slash_pos[0] - self.handler.inputs['mouse pos'][0] > 0:
-                        coef = -1
-                        flip = True
-                    else:
-                        coef = 1
-                        flip = False
+                #     if slash_pos[0] - self.handler.inputs['mouse pos'][0] > 0:
+                #         coef = -1
+                #         flip = True
+                #     else:
+                #         coef = 1
+                #         flip = False
 
-                slash_pos = (slash_pos[0] + coef*16 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
+                # slash_pos = (slash_pos[0] + coef*16 - slash.img.get_width()*0.5, slash_pos[1] - slash.img.get_height()*0.5)
+
                 slash.enemies = []
 
                 slash._real_pos = slash_pos
-                slash.animation.flip = (flip, False)
+                # slash.animation.flip = (flip, False)
 
                 if self.entity.fire:
                     slash.fire = Timer(self.FIRE_DURATION)
@@ -525,6 +586,7 @@ by dragging them in the forever loop.''')
                 slash.gen = None
                 
                 self.slashes.append(slash)
+                '''
 
             elif block.id == 'gold':
                 # sfx.sounds['money.wav'].play()
@@ -535,6 +597,10 @@ by dragging them in the forever loop.''')
                     ParticleGenerator.from_template(self.entity.rect.center, 'player')
                 )
                 self.entity._real_pos += self.entity.vel * 50
+
+        self.kill_timer -= 0.01
+        if self.kill_timer < 0: self.kill_timer = 0
+        # print(f'{self.kill_timer=}')
 
         if self.mode == 'game':
             self.timer.update()
@@ -590,7 +656,7 @@ by dragging them in the forever loop.''')
         if self.mode == 'game':
             self.time_passed += (self.t1 - self.t0)*1
         
-            self.enemy_interval = 3 * (1 / (0.01*self.time_passed + 1))
+            self.enemy_interval = 3 * (1 / (0.015*self.time_passed + 1))
             # self.enemy_interval = 10 * (1 / (0.01*self.time_passed + 1))
 
             if self.t1 - self.last_enemy >= self.enemy_interval:
@@ -616,15 +682,19 @@ by dragging them in the forever loop.''')
                 # enemy.dmg = 10
 
                 stats = self.ENEMY_STATS[enemy_name]
-                enemy = PhysicsEntity(pos=(200, 200), name=enemy_name, action='run', max_vel=stats['speed'])
+                p = (350, 250)
+                enemy = PhysicsEntity(pos=p, name=enemy_name, action='run', max_vel=stats['speed'])
                 enemy.fire = None
                 enemy.bar = Bar(pygame.Rect(0, 0, 15, 2), stats['hp'], stats['hp'], 'enemy')
                 enemy.dmg = stats['dmg']
+                self.particle_gens.append(
+                    ParticleGenerator.from_template(p, 'smoke')
+                )
 
 
 
 
-                self.enemies.append(enemy)
+                if 1: self.enemies.append(enemy)
                 self.last_enemy = self.t1
 
         self.t0 = time()
@@ -752,7 +822,7 @@ by dragging them in the forever loop.''')
                     if projectile.fire:
                         enemy.fire = Timer(self.FIRE_DURATION)
 
-            if enemy.rect.colliderect(self.entity.rect) and not self.entity.invincible and not self.game_over:
+            if enemy.rect.colliderect(self.entity.rect) and not self.entity.invincible and not self.entity.dashing and not self.game_over:
                 self.entity.invincible = Timer(60)
                 self.bars['hp'].change_val(-enemy.dmg)
                 sfx.sounds['hurt.wav'].play()
@@ -775,6 +845,7 @@ by dragging them in the forever loop.''')
                     ParticleGenerator.from_template(enemy.rect.center, 'death')
                 )
                 # particle stuff here TODO
+                self.kill_timer += 0.1
                 sfx.sounds['kill.wav'].play()
 
         self.enemies = new_enemies
@@ -812,9 +883,9 @@ by dragging them in the forever loop.''')
             else:
                 self.entity.animation.set_action('idle')
 
-            if self.handler.inputs['pressed'].get('space') and not self.entity.cooldown:
+            if self.handler.inputs['pressed'].get('space') and not self.entity.cooldown and self.entity.vel != [0, 0]:
                 sfx.sounds['dash.wav'].play()
-                self.entity.cooldown = Timer(20)
+                self.entity.cooldown = Timer(30)
                 self.entity.dashing = Timer(10)
                 self.entity.max_vel = 5
                 self.entity.vel = pygame.Vector2(self.entity.vel) * 5
@@ -904,7 +975,6 @@ by dragging them in the forever loop.''')
         hovered_block = None
 
         for block in self.blocks:
-            print(f'{block.vel=} {type(block.vel)}')
             block.rect.topleft += block.vel
             # block.vel *= 0.88
             block.vel *= 0.84
@@ -1013,14 +1083,17 @@ by dragging them in the forever loop.''')
         if self.bars['hp'].value == 0:
             self.game_over = True
             self.handler.transition_to(self.handler.states.Menu)
+            pygame.mixer.music.fadeout(1000)
+            self.handler.time_alive = self.time_passed
             self.entity.invincible = None
 
+            shader_handler.vars['killTimer'] = -1
             shader_handler.vars['caTimer'] = -1
             shader_handler.vars['shakeTimer'] = -1 
         else:
-
+            shader_handler.vars['killTimer'] = -1 if not self.kill_timer else self.kill_timer
             shader_handler.vars['caTimer'] = 1 if self.mode == 'shop' and not self.first_shop else -1
-            shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio
+            shader_handler.vars['shakeTimer'] = -1 if self.entity.invincible is None else self.entity.invincible.ratio ** 2
 
         self.first_loop = False
 
@@ -1079,6 +1152,7 @@ by dragging them in the forever loop.''')
         if clicked_button:
             # TODO: more feedback for purchase
 
+            sfx.sounds['money.wav'].play()
 
             self.gold -= clicked_button[0].price
 
