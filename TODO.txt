@@ -1,5 +1,6 @@
 - wave system
 - fire enemies
+    - shop bug fire
 
 
 polish

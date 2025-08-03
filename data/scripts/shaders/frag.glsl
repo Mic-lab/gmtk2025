@@ -5,6 +5,7 @@ uniform float transitionTimer;
 uniform int transitionState;
 uniform float shakeTimer = -1.0;
 uniform float caTimer = -1.0;
+
 in vec2 uvs;
 out vec4 f_color;
 
@@ -12,6 +13,9 @@ const float PI = 3.14159265359;
 const vec2 gridSize = vec2(64, 64);
 const float caCoef = 0.003;
 const float shakeCoef = 0.01;
+
+const int LINES = 288;
+const vec4 LINE_COLOR = vec4(0, 0, 0, 0);
 
 vec2 rotateVec(vec2 vec, float theta) {
     return vec.x * vec2(cos(theta), sin(theta))

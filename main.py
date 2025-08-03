@@ -36,7 +36,7 @@ class GameHandler:
             self.inputs['pressed'][key] = self.inputs['released'][key] = False
 
         mx, my = pygame.mouse.get_pos()
-        self.inputs['mouse pos'] = (mx // config.SCALE, my // config.SCALE)
+        self.inputs['mouse pos'] = (mx // config.scale, my // config.scale)
         self.inputs['unscaled mouse pos'] = mx, my
 
         for event in pygame.event.get():

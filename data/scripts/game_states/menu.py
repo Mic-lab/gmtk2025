@@ -1,21 +1,48 @@
+from data.scripts import config
+from data.scripts.config import CANVAS_SIZE
 from .state import State
+from .game import Game
 from ..mgl import shader_handler
 from ..import utils
 from ..button import Button
 from ..font import FONTS
 from ..import animation
+from ..entity import Entity, PhysicsEntity
+from ..timer import Timer
+from ..particle import Particle, ParticleGenerator
 from .. import sfx
 from ..animation import Animation
+from ..sfx import sounds
 import pygame
+from data.scripts import mgl
 
 class Menu(State):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        rects = [pygame.Rect(30, 30+i*30, 80, 20) for i in range(4)]
+
+
+
+        CANVAS_SIZE = config.CANVAS_SIZE
+        w = 110
+        h = 18
+        rects = [pygame.Rect(CANVAS_SIZE[0]*0.5 - w*0.5, 150+i*20, w, h) for i in range(5)]
+        s_i = 2
+        r = rects[s_i].copy()
+        r.x += 120
+        r.w -= 50
+
+        self.scale = config.scale
+
+
+        # rects = [pygame.Rect(30, 30+i*30, 80, 20) for i in range(4)]
         self.buttons = {
-            'game': Button(rects[0], 'Play', 'basic'),
+            'play': Button(rects[0], f'Play', 'basic'),
+            'scale': Button(rects[s_i], f'Game Scale ({self.scale}x)', 'basic'),
+            'apply': Button(r, f'Apply', 'basic'),
+            # 'fullscreen': Button(rects[1], f'Enable fullscreen', 'basic'),
+            # 'crt': Button(rects[3], f'Toggle scanlines', 'basic'),
         }
 
     def sub_update(self):
@@ -30,7 +57,22 @@ class Menu(State):
             btn.render(self.handler.canvas)
 
             if btn.clicked:
-                if key == 'game':
+                if key == 'scale':
+
+                    self.scale = (self.scale + 1) % 6
+                    if self.scale == 0: self.scale = 1
+                    btn.text = f'Game Scale ({self.scale}x)'
+
+                elif key == 'apply':
+                    config.scale = self.scale
+                    SCREEN_SIZE = config.scale*CANVAS_SIZE[0], config.scale*CANVAS_SIZE[1]
+                    mgl.screen = pygame.display.set_mode(SCREEN_SIZE,  pygame.OPENGL | pygame.DOUBLEBUF)
+                    shader_handler.ctx.viewport = (0, 0, SCREEN_SIZE[0], SCREEN_SIZE[1])
+
+                elif key == 'crt':
+                    shader_handler.vars['crt'] = not shader_handler.vars['crt']
+
+                elif key == 'play':
                     self.handler.transition_to(self.handler.states.Game)
 
 

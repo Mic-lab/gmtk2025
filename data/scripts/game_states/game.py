@@ -223,11 +223,12 @@ by dragging them in the forever loop.''')
             'hp': Bar(pygame.Rect(10, 10, 100, 15), 100, 100, 'hp', 'HP'),
         }
         # self.gold = 5
-        # self.gold = 999
-        self.gold = 0
+        self.gold = 999
+        # self.gold = 0
 
         self.projectiles=[]
         self.slashes = []
+        self.pits = []
         
         self.loop_duration = 60
         self.particle_gens = []
@@ -237,7 +238,7 @@ by dragging them in the forever loop.''')
         self.loop_block = Entity((10, y), 'loop_block')
 
         rects = [pygame.Rect(10, y+120+i*20, 120, 16) for i in range(20)]
-        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+80+i*20, 120, 16) for i in range(20)]
+        locked_rects = [pygame.Rect(config.CANVAS_SIZE[0], y+70+i*18, 120, 16) for i in range(20)]
 
         self.snap_positions = [(30, y+19+i*15) for i in range(5)]
         self.slots = [None for i in range(len(self.snap_positions))]
@@ -251,20 +252,23 @@ by dragging them in the forever loop.''')
         self.locked_blocks = [
             Block(3, 'gold', locked_rects[0], 'Get 1 gold', 'yellow', disabled=True),
             Block(3, 'hp', locked_rects[1], 'Get 1 HP', 'red', disabled=True),
-            Block(3, 'slash', locked_rects[2], 'Slash', 'purple', disabled=True),
-            Block(3, 'projectile', locked_rects[3], 'Projectile', 'purple', disabled=True),
+            Block(3, 'hp', locked_rects[2], 'Get 1 HP', 'red', disabled=True),
+            Block(3, 'slash', locked_rects[3], 'Slash', 'purple', disabled=True),
             Block(3, 'projectile', locked_rects[4], 'Projectile', 'purple', disabled=True),
-            Block(3, 'fire', locked_rects[5], 'Ignite', 'orange', disabled=True),
-            Block(15, 'water', locked_rects[6], 'Water', 'blue', disabled=True),
+            Block(3, 'projectile', locked_rects[5], 'Projectile', 'purple', disabled=True),
+            Block(3, 'pit', locked_rects[5], 'Stab pit', 'purple', disabled=True),
+            Block(3, 'fire', locked_rects[6], 'Ignite', 'orange', disabled=True),
+            Block(15, 'water', locked_rects[7], 'Water', 'blue', disabled=True),
         ]
 
-        self.prices = [15,
+        self.prices = [10,
+                       20,
+                       20,
+                       20,
+                       20,
                        30,
-                       25,
-                       25,
-                       25,
-                       40,
-                       50,]
+                       20,
+                       30,]
 
         self.price_buttons = []
         for i, price in enumerate(self.prices):
@@ -305,8 +309,10 @@ by dragging them in the forever loop.''')
                 block.description = 'Teleports towards direction of\nplayer movement.\nDifficult to use.'
             elif block.id == 'projectile':
                 block.description = 'Shoots an arrow at mouse position.'
+            elif block.id == 'pit':
+                block.description = 'Creates a pit on cursor that deals\ndamage proportionate to the\nnumber of enemies inside.'
             elif block.id == 'fire':
-                block.description = 'Light yourself up on fire!\nDealing damage fire damage at the cost\nof taking fire damage.'
+                block.description = 'Light yourself up on fire!\nYou\'ll deal fire damage at\nthe cost of taking fire damage.'
             elif block.id == 'water':
                 block.description = 'Extinguish fire.'
             else:
@@ -407,6 +413,28 @@ by dragging them in the forever loop.''')
                 new_slashes.append(slash)
         self.slashes = new_slashes
 
+
+
+        new_pits = []
+        for pit in self.pits:
+            if pit.done:
+                # particle = ParticleGenerator.TEMPLATES['smoke']['base_particle'].copy()
+                # particle.vel = projectile.vel * 0.3
+                # self.particle_gens.append(
+                #     ParticleGenerator.from_template(projectile.rect.center, 'smoke', base_particle=particle)
+                # )
+                continue
+
+            if self.mode == 'game': pit.update()
+            projectile.render(self.handler.canvas)
+            new_pits.append(projectile)
+        self.pits = new_pits
+
+
+
+
+        
+
         # Update blocks ------
         # NOTE: only skips 1 frame, not all Nones
         skip = False
@@ -446,6 +474,17 @@ by dragging them in the forever loop.''')
                     projectile.fire = None
 
                 self.projectiles.append(projectile)
+            elif block.id == 'pit':
+                pit = Entity(pos=self.inputs['mouse pos'], name='pit', action='idle')
+                pit.done = False
+
+                
+                # if self.entity.fire:
+                #     projectile.fire = Timer(self.FIRE_DURATION)
+                # else:
+                #     projectile.fire = None
+
+                self.pits.append(pit)
             elif block.id == 'slash':
                 # slash_pos = Vector2(self.entity.rect.center) - self.handler.inputs['mouse pos']
                 # mouse_dist.scale_to_length(8)
@@ -586,13 +625,18 @@ by dragging them in the forever loop.''')
 
         self.t0 = time()
 
+
         # fire
+        burn = False
         for entity in [self.entity] + self.enemies + self.slashes + self.projectiles:
             if entity.fire:
                 if entity.fire.done:
                     entity.fire = None
                     continue
                 if entity.fire.frame % 50 == 0:
+                    if self.mode == 'shop':
+                        entity.fire.frame += 1
+                    burn = True
 
                     if entity is self.entity:
                         
@@ -627,7 +671,7 @@ by dragging them in the forever loop.''')
                 if self.mode == 'game':
                     entity.fire.update()
                 
-
+        if burn: sfx.sounds['burn.wav'].play()
 
 
         for enemy in self.enemies:
