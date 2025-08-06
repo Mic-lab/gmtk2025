@@ -1,9 +1,0 @@
-- wave system
-- fire enemies
-    - shop bug fire
-
-
-polish
-    + 1 besides hp
-
-size gives error cause no size
